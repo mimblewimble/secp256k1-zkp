@@ -44,6 +44,9 @@ static void secp256k1_scalar_get_b32(unsigned char *bin, const secp256k1_scalar*
 /** Add two scalars together (modulo the group order). Returns whether it overflowed. */
 static int secp256k1_scalar_add(secp256k1_scalar *r, const secp256k1_scalar *a, const secp256k1_scalar *b);
 
+/** Subtract a smaller scalar from a larger one, where "smaller" and "larger" mean as integers */
+static void secp256k1_scalar_numsub(secp256k1_scalar *r, const secp256k1_scalar *a, const secp256k1_scalar *b);
+
 /** Conditionally add a power of two to a scalar. The result is not allowed to overflow. */
 static void secp256k1_scalar_cadd_bit(secp256k1_scalar *r, unsigned int bit, int flag);
 
@@ -92,6 +95,9 @@ static void secp256k1_scalar_order_get_num(secp256k1_num *r);
 
 /** Compare two scalars. */
 static int secp256k1_scalar_eq(const secp256k1_scalar *a, const secp256k1_scalar *b);
+
+/** Compare two scalars for numeric inequality */
+static int secp256k1_scalar_cmp_var(const secp256k1_scalar *a, const secp256k1_scalar *b);
 
 #ifdef USE_ENDOMORPHISM
 /** Find r1 and r2 such that r1+r2*2^128 = a. */

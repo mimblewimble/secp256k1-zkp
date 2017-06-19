@@ -136,6 +136,29 @@ static int secp256k1_scalar_add(secp256k1_scalar *r, const secp256k1_scalar *a, 
     return overflow;
 }
 
+SECP256K1_INLINE static void secp256k1_scalar_numsub(secp256k1_scalar *r, const secp256k1_scalar *a, const secp256k1_scalar *b) {
+    int c0 = a->d[0] < b->d[0];
+    int c1 = a->d[1] < b->d[1] || (c0 && a->d[1] == b->d[1]);
+    int c2 = a->d[2] < b->d[2] || (c1 && a->d[2] == b->d[2]);
+    int c3 = a->d[3] < b->d[3] || (c2 && a->d[3] == b->d[3]);
+    int c4 = a->d[4] < b->d[4] || (c3 && a->d[4] == b->d[4]);
+    int c5 = a->d[5] < b->d[5] || (c4 && a->d[5] == b->d[5]);
+    int c6 = a->d[6] < b->d[6] || (c5 && a->d[6] == b->d[6]);
+#ifdef VERIFY
+    int c7 = a->d[7] < b->d[7] || (c6 && a->d[7] == b->d[7]);
+    CHECK(c7 == 0);
+#endif
+
+    r->d[7] = a->d[7] - b->d[7] - c6;
+    r->d[6] = a->d[6] - b->d[6] - c5;
+    r->d[5] = a->d[5] - b->d[5] - c4;
+    r->d[4] = a->d[4] - b->d[4] - c3;
+    r->d[3] = a->d[3] - b->d[3] - c2;
+    r->d[2] = a->d[2] - b->d[2] - c1;
+    r->d[1] = a->d[1] - b->d[1] - c0;
+    r->d[0] = a->d[0] - b->d[0];
+}
+
 static void secp256k1_scalar_cadd_bit(secp256k1_scalar *r, unsigned int bit, int flag) {
     uint64_t t;
     VERIFY_CHECK(bit < 256);
@@ -695,6 +718,19 @@ static void secp256k1_scalar_split_128(secp256k1_scalar *r1, secp256k1_scalar *r
 
 SECP256K1_INLINE static int secp256k1_scalar_eq(const secp256k1_scalar *a, const secp256k1_scalar *b) {
     return ((a->d[0] ^ b->d[0]) | (a->d[1] ^ b->d[1]) | (a->d[2] ^ b->d[2]) | (a->d[3] ^ b->d[3]) | (a->d[4] ^ b->d[4]) | (a->d[5] ^ b->d[5]) | (a->d[6] ^ b->d[6]) | (a->d[7] ^ b->d[7])) == 0;
+}
+
+SECP256K1_INLINE static int secp256k1_scalar_cmp_var(const secp256k1_scalar *a, const secp256k1_scalar *b) {
+    int i;
+    for (i = 7; i >= 0; i--) {
+        if (a->d[i] > b->d[i]) {
+            return 1;
+        }
+        if (a->d[i] < b->d[i]) {
+            return -1;
+        }
+    }
+    return 0;
 }
 
 SECP256K1_INLINE static void secp256k1_scalar_mul_shift_var(secp256k1_scalar *r, const secp256k1_scalar *a, const secp256k1_scalar *b, unsigned int shift) {

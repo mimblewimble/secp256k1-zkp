@@ -1,5 +1,5 @@
 /**********************************************************************
- * Copyright (c) 2013, 2014 Pieter Wuille                             *
+ * Copyright (c) 2013, 2014, 2017 Pieter Wuille, Andrew Poelstra      *
  * Distributed under the MIT software license, see the accompanying   *
  * file COPYING or http://www.opensource.org/licenses/mit-license.php.*
  **********************************************************************/
@@ -9,6 +9,9 @@
 
 #include "num.h"
 #include "group.h"
+#include "scalar.h"
+
+#define SECP256K1_ECMULT_MULTI_MAX_N	32
 
 typedef struct {
     /* For accelerating the computation of a*P + b*G: */
@@ -27,5 +30,8 @@ static int secp256k1_ecmult_context_is_built(const secp256k1_ecmult_context *ctx
 
 /** Double multiply: R = na*A + ng*G */
 static void secp256k1_ecmult(const secp256k1_ecmult_context *ctx, secp256k1_gej *r, const secp256k1_gej *a, const secp256k1_scalar *na, const secp256k1_scalar *ng);
+
+/**j Multi-multiply: R = sum_i ni * Ai. Will trash the sc and pt arrays. */
+static void secp256k1_ecmult_multi(secp256k1_gej *r, secp256k1_scalar *sc, secp256k1_gej *pt, size_t n);
 
 #endif
