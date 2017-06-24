@@ -2554,6 +2554,25 @@ void run_ecmult_multi_tests(void) {
         size_t sizes[] = { 2, 10, 32 };
 
         for (j = 0; j < 3; j++) {
+            for (i = 0; i < 32; i++) {
+                random_scalar_order(&sc[i]);
+                secp256k1_gej_set_infinity(&pt[i]);
+            }
+            secp256k1_ecmult_multi(&r, sc, pt, sizes[j]);
+            CHECK(secp256k1_gej_is_infinity(&r));
+        }
+
+        for (j = 0; j < 3; j++) {
+            for (i = 0; i < 32; i++) {
+                random_group_element_test(&ptg);
+                secp256k1_gej_set_ge(&pt[i], &ptg);
+                secp256k1_scalar_set_int(&sc[i], 0);
+            }
+            secp256k1_ecmult_multi(&r, sc, pt, sizes[j]);
+            CHECK(secp256k1_gej_is_infinity(&r));
+        }
+
+        for (j = 0; j < 3; j++) {
             random_group_element_test(&ptg);
             for (i = 0; i < 16; i++) {
                 random_scalar_order(&sc[2*i]);
@@ -2737,10 +2756,9 @@ void test_constant_wnaf(const secp256k1_scalar *number, int w) {
 }
 
 void run_heap(void){
-    unsigned char heap_idx[20];
+    secp256k1_scalar_heap heap;
     secp256k1_scalar sc[20];
     secp256k1_gej pt[20];
-    size_t heap_n = 0;
     size_t i;
 
     unsigned char idx1, idx2;
@@ -2752,30 +2770,24 @@ void run_heap(void){
     random_group_element_test(&ptg);
     secp256k1_gej_set_ge(&pt[0], &ptg);
 
-    heap_n = 1;
-    heap_idx[0] = 0;
-    secp256k1_heapify(sc, heap_idx, heap_n);
-    CHECK(heap_n == 1);
-    secp256k1_heap_remove(sc, heap_idx, &heap_n);
-    CHECK(heap_n == 0);
+    secp256k1_heap_initialize(&heap, sc, pt, 1);
+    CHECK(heap.size == 1);
+    secp256k1_heap_remove(&heap);
+    CHECK(heap.size == 0);
 
     /* Multi-item stack */
     for (i = 0; i < 20; i++) {
         random_scalar_order(&sc[i]);
         random_group_element_test(&ptg);
         secp256k1_gej_set_ge(&pt[i], &ptg);
-        heap_idx[i] = i;
     }
-    heap_n = i;
-    secp256k1_heapify(sc, heap_idx, heap_n);
+    secp256k1_heap_initialize(&heap, sc, pt, i);
 
-    idx1 = heap_idx[0];
-    secp256k1_heap_remove(sc, heap_idx, &heap_n);
-    CHECK(heap_n == 19);
+    idx1 = secp256k1_heap_remove(&heap);
+    CHECK(heap.size == 19);
     for (i = 0; i < 19; i++) {
-        idx2 = heap_idx[0];
-        secp256k1_heap_remove(sc, heap_idx, &heap_n);
-        CHECK(heap_n == 18 - i);
+        idx2 = secp256k1_heap_remove(&heap);
+        CHECK(heap.size == 18 - i);
         CHECK(secp256k1_scalar_cmp_var(&sc[idx2], &sc[idx1]) <= 0);
         idx1 = idx2;
     }
@@ -2785,21 +2797,18 @@ void run_heap(void){
         random_scalar_order(&sc[i]);
         random_group_element_test(&ptg);
         secp256k1_gej_set_ge(&pt[i], &ptg);
-        heap_idx[i] = i;
     }
     for (; i < 20; i++) {
-        heap_idx[i] = i % 7;
+        sc[i] = sc[i % 7];
+        pt[i] = pt[i % 7];
     }
-    heap_n = i;
-    secp256k1_heapify(sc, heap_idx, heap_n);
+    secp256k1_heap_initialize(&heap, sc, pt, i);
 
-    idx1 = heap_idx[0];
-    secp256k1_heap_remove(sc, heap_idx, &heap_n);
-    CHECK(heap_n == 19);
+    idx1 = secp256k1_heap_remove(&heap);
+    CHECK(heap.size == 19);
     for (i = 0; i < 19; i++) {
-        idx2 = heap_idx[0];
-        secp256k1_heap_remove(sc, heap_idx, &heap_n);
-        CHECK(heap_n == 18 - i);
+        idx2 = secp256k1_heap_remove(&heap);
+        CHECK(heap.size == 18 - i);
         CHECK(secp256k1_scalar_cmp_var(&sc[idx2], &sc[idx1]) <= 0);
         idx1 = idx2;
     }
