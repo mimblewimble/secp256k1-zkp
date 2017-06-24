@@ -2665,6 +2665,58 @@ void run_ecmult_multi_tests(void) {
     secp256k1_ecmult_multi(&r, sc, pt, 6);
     secp256k1_ecmult_multi(&r, sc, pt, 5);
     CHECK(secp256k1_gej_is_infinity(&r));
+
+    /* Run through s0*(t0*P) + s1*(t1*P) exhaustively for many small values of s0, s1, t0, t1 */
+    {
+        const size_t TOP = 8;
+        size_t s0i, s1i;
+        size_t t0i, t1i;
+        secp256k1_ge ptg;
+        secp256k1_gej ptgj;
+
+        random_group_element_test(&ptg);
+        secp256k1_gej_set_ge(&ptgj, &ptg);
+
+        for(t0i = 0; t0i < TOP; t0i++) {
+            for(t1i = 0; t1i < TOP; t1i++) {
+                secp256k1_gej t0p, t1p;
+                secp256k1_scalar t0, t1;
+
+                secp256k1_scalar_set_int(&t0, (t0i + 1) / 2);
+                secp256k1_scalar_cond_negate(&t0, t0i & 1);
+                secp256k1_scalar_set_int(&t1, (t1i + 1) / 2);
+                secp256k1_scalar_cond_negate(&t1, t1i & 1);
+
+                secp256k1_ecmult(&ctx->ecmult_ctx, &t0p, &ptgj, &t0, &szero);
+                secp256k1_ecmult(&ctx->ecmult_ctx, &t1p, &ptgj, &t1, &szero);
+
+                for(s0i = 0; s0i < TOP; s0i++) {
+                    for(s1i = 0; s1i < TOP; s1i++) {
+                        secp256k1_scalar tmp1, tmp2;
+                        secp256k1_gej expected, actual;
+
+                        pt[0] = t0p;
+                        pt[1] = t1p;
+
+                        secp256k1_scalar_set_int(&sc[0], (s0i + 1) / 2);
+                        secp256k1_scalar_cond_negate(&sc[0], s0i & 1);
+                        secp256k1_scalar_set_int(&sc[1], (s1i + 1) / 2);
+                        secp256k1_scalar_cond_negate(&sc[1], s1i & 1);
+
+                        secp256k1_scalar_mul(&tmp1, &t0, &sc[0]);
+                        secp256k1_scalar_mul(&tmp2, &t1, &sc[1]);
+                        secp256k1_scalar_add(&tmp1, &tmp1, &tmp2);
+
+                        secp256k1_ecmult(&ctx->ecmult_ctx, &expected, &ptgj, &tmp1, &szero);
+                        secp256k1_ecmult_multi(&actual, sc, pt, 2);
+                        secp256k1_gej_neg(&expected, &expected);
+                        secp256k1_gej_add_var(&actual, &actual, &expected, NULL);
+                        CHECK(secp256k1_gej_is_infinity(&actual));
+                    }
+                }
+            }
+        }
+    }
 }
 
 void test_wnaf(const secp256k1_scalar *number, int w) {

@@ -560,6 +560,19 @@ static void secp256k1_ecmult_multi(secp256k1_gej *r, secp256k1_scalar *sc, secp2
              * be small. */
             secp256k1_gej_add_var(&pt[second], &pt[first], &pt[second], NULL);  /* Y -> X + Y */
             secp256k1_scalar_numsub(&sc[first], &sc[first], &sc[second]);  /* n -> n - m */
+
+            if (secp256k1_scalar_cmp_var(&sc[first], &sc[second]) < 0) {
+                break;
+            }
+
+            /* For pathological inputs, n and m may not be similar in magnitude (e.g. if
+             * n ~ 2^256 and m ~ 1. In this case the above step will not reduce the magnitude
+             * of the larger scalar, which we detect with the above condition. In this case
+             * we simply halve the scalar and double its point, ensuring we make progress. */
+            if (secp256k1_scalar_shr_int(&sc[first], 1) == 1) {
+                secp256k1_gej_add_var(r, r, &pt[first], NULL);
+            }
+            secp256k1_gej_double_var(&pt[first], &pt[first], NULL);
         }
         while (secp256k1_scalar_cmp_var(&sc[first], &sc[second]) >= 0);
 
