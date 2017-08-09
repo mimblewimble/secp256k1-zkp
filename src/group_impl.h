@@ -681,6 +681,15 @@ static void secp256k1_ge_mul_lambda(secp256k1_ge *r, const secp256k1_ge *a) {
     *r = *a;
     secp256k1_fe_mul(&r->x, &r->x, &beta);
 }
+
+static void secp256k1_gej_mul_lambda(secp256k1_gej *r, const secp256k1_gej *a) {
+    static const secp256k1_fe beta = SECP256K1_FE_CONST(
+        0x7ae96a2bul, 0x657c0710ul, 0x6e64479eul, 0xac3434e9ul,
+        0x9cf04975ul, 0x12f58995ul, 0xc1396c28ul, 0x719501eeul
+    );
+    *r = *a;
+    secp256k1_fe_mul(&r->x, &r->x, &beta);
+}
 #endif
 
 static int secp256k1_gej_has_quad_y_var(const secp256k1_gej *a) {

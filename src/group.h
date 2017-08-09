@@ -121,6 +121,9 @@ static void secp256k1_gej_add_zinv_var(secp256k1_gej *r, const secp256k1_gej *a,
 #ifdef USE_ENDOMORPHISM
 /** Set r to be equal to lambda times a, where lambda is chosen in a way such that this is very fast. */
 static void secp256k1_ge_mul_lambda(secp256k1_ge *r, const secp256k1_ge *a);
+
+/** Set r to be equal to lambda times a, where lambda is chosen in a way such that this is very fast. */
+static void secp256k1_gej_mul_lambda(secp256k1_gej *r, const secp256k1_gej *a);
 #endif
 
 /** Clear a secp256k1_gej to prevent leaking sensitive information. */
