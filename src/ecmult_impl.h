@@ -616,7 +616,7 @@ SECP256K1_INLINE static void secp256k1_ecmult_endo_split(secp256k1_scalar *s1, s
 }
 #endif
 
-static int secp256k1_ecmult_multi(secp256k1_scratch *scratch, const secp256k1_callback* error_callback, secp256k1_gej *r, const secp256k1_scalar *inp_g_sc, secp256k1_ecmult_multi_callback cb, void *cbdata, size_t n) {
+static int secp256k1_ecmult_multi(const secp256k1_ecmult_context *ctx, secp256k1_scratch *scratch, const secp256k1_callback* error_callback, secp256k1_gej *r, const secp256k1_scalar *inp_g_sc, secp256k1_ecmult_multi_callback cb, void *cbdata, size_t n) {
     const size_t entry_size = sizeof(secp256k1_gej) + sizeof(secp256k1_scalar) + sizeof(size_t);
     const size_t max_entries = secp256k1_scratch_max_allocation(scratch) / entry_size;
     /* Use 2(n+1) with the endomorphism, n+1 without, when calculating batch sizes.
@@ -650,6 +650,7 @@ static int secp256k1_ecmult_multi(secp256k1_scratch *scratch, const secp256k1_ca
     tree_space = (uint32_t *) secp256k1_scratch_alloc(scratch, entries_per_batch * sizeof(*tree_space));
     VERIFY_CHECK(pt != NULL);
     VERIFY_CHECK(sc != NULL);
+    VERIFY_CHECK(ctx != NULL);
     VERIFY_CHECK(tree_space != NULL);
 
     sc[0] = *inp_g_sc;

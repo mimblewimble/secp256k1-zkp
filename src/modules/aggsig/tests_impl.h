@@ -116,21 +116,23 @@ void test_aggsig_api(void) {
     CHECK(ecount == 15);
 
     memset(sig, 0, sizeof(sig));
-    CHECK(!secp256k1_aggsig_verify(none, scratch, sig, msg, pubkeys, 5));
+    CHECK(!secp256k1_aggsig_verify(vrfy, scratch, sig, msg, pubkeys, 5));
     CHECK(secp256k1_aggsig_combine_signatures(none, aggctx, sig, partials, 5));
-    CHECK(!secp256k1_aggsig_verify(none, scratch, sig, msg, pubkeys, 4));
-    CHECK(!secp256k1_aggsig_verify(none, scratch, sig, msg, pubkeys, 0));
-    CHECK(secp256k1_aggsig_verify(none, scratch, sig, msg, pubkeys, 5));
+    CHECK(!secp256k1_aggsig_verify(vrfy, scratch, sig, msg, pubkeys, 4));
+    CHECK(!secp256k1_aggsig_verify(vrfy, scratch, sig, msg, pubkeys, 0));
+    CHECK(secp256k1_aggsig_verify(vrfy, scratch, sig, msg, pubkeys, 5));
     CHECK(ecount == 15);
-
-    CHECK(!secp256k1_aggsig_verify(none, NULL, sig, msg, pubkeys, 5));
+    CHECK(!secp256k1_aggsig_verify(none, scratch, sig, msg, pubkeys, 5));
     CHECK(ecount == 16);
-    CHECK(!secp256k1_aggsig_verify(none, scratch, NULL, msg, pubkeys, 5));
+
+    CHECK(!secp256k1_aggsig_verify(vrfy, NULL, sig, msg, pubkeys, 5));
     CHECK(ecount == 17);
-    CHECK(!secp256k1_aggsig_verify(none, scratch, sig, NULL, pubkeys, 5));
+    CHECK(!secp256k1_aggsig_verify(vrfy, scratch, NULL, msg, pubkeys, 5));
     CHECK(ecount == 18);
-    CHECK(!secp256k1_aggsig_verify(none, scratch, sig, msg, NULL, 5));
+    CHECK(!secp256k1_aggsig_verify(vrfy, scratch, sig, NULL, pubkeys, 5));
     CHECK(ecount == 19);
+    CHECK(!secp256k1_aggsig_verify(vrfy, scratch, sig, msg, NULL, 5));
+    CHECK(ecount == 20);
 
     /* cleanup */
     secp256k1_aggsig_context_destroy(aggctx);

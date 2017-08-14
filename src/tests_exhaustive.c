@@ -212,7 +212,7 @@ void test_exhaustive_ecmult_multi(const secp256k1_context *ctx, const secp256k1_
                         data.pt[0] = groupj[x];
                         data.pt[1] = groupj[y];
 
-                        secp256k1_ecmult_multi(scratch, &ctx->error_callback, &tmp, &g_sc, ecmult_multi_callback, &data, 2);
+                        secp256k1_ecmult_multi(&ctx->ecmult_ctx, scratch, &ctx->error_callback, &tmp, &g_sc, ecmult_multi_callback, &data, 2);
                         ge_equals_gej(&group[(i * x + j * y + k) % order], &tmp);
                     }
                 }

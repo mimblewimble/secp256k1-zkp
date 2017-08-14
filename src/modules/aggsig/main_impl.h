@@ -248,6 +248,7 @@ int secp256k1_aggsig_verify(const secp256k1_context* ctx, secp256k1_scratch_spac
     secp256k1_verify_callback_data cbdata;
 
     VERIFY_CHECK(ctx != NULL);
+    ARG_CHECK(secp256k1_ecmult_context_is_built(&ctx->ecmult_ctx));
     ARG_CHECK(scratch != NULL);
     ARG_CHECK(sig64 != NULL);
     ARG_CHECK(msg32 != NULL);
@@ -275,7 +276,7 @@ int secp256k1_aggsig_verify(const secp256k1_context* ctx, secp256k1_scratch_spac
     secp256k1_compute_prehash(ctx, cbdata.prehash, pubkeys, n_pubkeys, &r_x, msg32);
 
     /* Compute sum sG - e_i*P_i, which should be R */
-    if (!secp256k1_ecmult_multi(scratch, &ctx->error_callback, &pk_sum, &g_sc, secp256k1_aggsig_verify_callback, &cbdata, n_pubkeys)) {
+    if (!secp256k1_ecmult_multi(&ctx->ecmult_ctx, scratch, &ctx->error_callback, &pk_sum, &g_sc, secp256k1_aggsig_verify_callback, &cbdata, n_pubkeys)) {
         return 0;
     }
 
