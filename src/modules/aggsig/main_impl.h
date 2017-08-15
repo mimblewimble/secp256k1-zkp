@@ -226,16 +226,14 @@ typedef struct {
     const secp256k1_pubkey *pubkeys;
 } secp256k1_verify_callback_data;
 
-static int secp256k1_aggsig_verify_callback(secp256k1_scalar *sc, secp256k1_gej *pt, size_t idx, void *data) {
-    secp256k1_ge ge_tmp;
+static int secp256k1_aggsig_verify_callback(secp256k1_scalar *sc, secp256k1_ge *pt, size_t idx, void *data) {
     secp256k1_verify_callback_data *cbdata = (secp256k1_verify_callback_data*) data;
 
     if (secp256k1_compute_sighash(sc, cbdata->prehash, idx) == 0) {
         return 0;
     }
     secp256k1_scalar_negate(sc, sc);
-    secp256k1_pubkey_load(cbdata->ctx, &ge_tmp, &cbdata->pubkeys[idx]);
-    secp256k1_gej_set_ge(pt, &ge_tmp);
+    secp256k1_pubkey_load(cbdata->ctx, pt, &cbdata->pubkeys[idx]);
     return 1;
 }
 

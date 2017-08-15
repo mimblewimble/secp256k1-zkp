@@ -722,9 +722,11 @@ static int secp256k1_ecmult_multi_split_bos_coster(const secp256k1_ecmult_contex
 
     secp256k1_gej_set_infinity(r);
     while (point_idx < n) {
-        if (!cb(&sc[idx], &pt[idx], point_idx, cbdata)) {
+        secp256k1_ge point;
+        if (!cb(&sc[idx], &point, point_idx, cbdata)) {
             return 0;
         }
+        secp256k1_gej_set_ge(&pt[idx], &point);
         idx++;
 #ifdef USE_ENDOMORPHISM
         secp256k1_ecmult_endo_split(&sc[idx - 1], &sc[idx], &pt[idx - 1], &pt[idx]);
@@ -758,7 +760,9 @@ static int secp256k1_ecmult_multi_split_strauss_wnaf(const secp256k1_ecmult_cont
     (void)error_callback;
 
     while (in_pos < n) {
-        if (!cb(&scalars[out_pos], &points[out_pos], in_pos, cbdata)) return 0;
+        secp256k1_ge point;
+        if (!cb(&scalars[out_pos], &point, in_pos, cbdata)) return 0;
+        secp256k1_gej_set_ge(&points[out_pos], &point);
         ++in_pos;
         ++out_pos;
         if (out_pos == STRAUSS_WNAF_MAX_POINTS || in_pos == n) {
