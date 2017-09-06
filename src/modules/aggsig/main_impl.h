@@ -33,7 +33,7 @@ struct secp256k1_aggsig_context_struct {
 };
 
 /* Compute the hash of all the data that every pubkey needs to sign */
-static void secp256k1_compute_prehash(const secp256k1_context *ctx, unsigned char *output, const secp256k1_pubkey *pubkeys, size_t n_pubkeys, secp256k1_ge *nonce_ge, const unsigned char *msghash32) {
+static void secp256k1_compute_prehash(const secp256k1_context *ctx, unsigned char *output, const secp256k1_pubkey *pubkeys, size_t n_pubkeys, const secp256k1_fe *nonce_ge_x, const unsigned char *msghash32) {
     size_t i;
     unsigned char buf[33];
     size_t buflen = sizeof(buf);
@@ -45,8 +45,8 @@ static void secp256k1_compute_prehash(const secp256k1_context *ctx, unsigned cha
         secp256k1_sha256_write(&hasher, buf, sizeof(buf));
     }
     /* Encode nonce */
-    CHECK(secp256k1_eckey_pubkey_serialize(nonce_ge, buf, &buflen, 1));
-    secp256k1_sha256_write(&hasher, buf, sizeof(buf));
+    secp256k1_fe_get_b32(buf, nonce_ge_x);
+    secp256k1_sha256_write(&hasher, buf, 32);
     /* Encode message */
     secp256k1_sha256_write(&hasher, msghash32, 32);
     /* Finish */
@@ -160,7 +160,8 @@ int secp256k1_aggsig_partial_sign(const secp256k1_context* ctx, secp256k1_aggsig
         secp256k1_ge_neg(&tmp_ge, &tmp_ge);
     }
 
-    secp256k1_compute_prehash(ctx, prehash, aggctx->pubkeys, aggctx->n_sigs, &tmp_ge, msghash32);
+    secp256k1_fe_normalize(&tmp_ge.x);
+    secp256k1_compute_prehash(ctx, prehash, aggctx->pubkeys, aggctx->n_sigs, &tmp_ge.x, msghash32);
     if (secp256k1_compute_sighash(&sighash, prehash, index) == 0) {
         return 0;
     }
@@ -241,8 +242,8 @@ static int secp256k1_aggsig_verify_callback(secp256k1_scalar *sc, secp256k1_gej 
 int secp256k1_aggsig_verify(const secp256k1_context* ctx, secp256k1_scratch_space *scratch, const unsigned char *sig64, const unsigned char *msg32, const secp256k1_pubkey *pubkeys, size_t n_pubkeys) {
     secp256k1_scalar g_sc;
     secp256k1_gej pk_sum;
-    secp256k1_fe fe_tmp;
-    secp256k1_ge r_ge;
+    secp256k1_ge pk_sum_ge;
+    secp256k1_fe r_x;
     int overflow;
     secp256k1_verify_callback_data cbdata;
 
@@ -264,17 +265,14 @@ int secp256k1_aggsig_verify(const secp256k1_context* ctx, secp256k1_scratch_spac
     }
 
     /* extract R */
-    if (!secp256k1_fe_set_b32(&fe_tmp, sig64 + 32)) {
-        return 0;
-    }
-    if (!secp256k1_ge_set_xquad(&r_ge, &fe_tmp)) {
+    if (!secp256k1_fe_set_b32(&r_x, sig64 + 32)) {
         return 0;
     }
 
     /* Populate callback data */
     cbdata.ctx = ctx;
     cbdata.pubkeys = pubkeys;
-    secp256k1_compute_prehash(ctx, cbdata.prehash, pubkeys, n_pubkeys, &r_ge, msg32);
+    secp256k1_compute_prehash(ctx, cbdata.prehash, pubkeys, n_pubkeys, &r_x, msg32);
 
     /* Compute sum sG - e_i*P_i, which should be R */
     if (!secp256k1_ecmult_multi(scratch, &ctx->error_callback, &pk_sum, &g_sc, secp256k1_aggsig_verify_callback, &cbdata, n_pubkeys)) {
@@ -282,9 +280,9 @@ int secp256k1_aggsig_verify(const secp256k1_context* ctx, secp256k1_scratch_spac
     }
 
     /* Check sum */
-    secp256k1_ge_neg(&r_ge, &r_ge);
-    secp256k1_gej_add_ge_var(&pk_sum, &pk_sum, &r_ge, NULL);
-    return secp256k1_gej_is_infinity(&pk_sum);
+    secp256k1_ge_set_gej(&pk_sum_ge, &pk_sum);
+    return secp256k1_fe_equal_var(&r_x, &pk_sum_ge.x) &&
+           secp256k1_gej_has_quad_y_var(&pk_sum);
 }
 
 void secp256k1_aggsig_context_destroy(secp256k1_aggsig_context *aggctx) {
