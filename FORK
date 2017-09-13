@@ -1,1 +1,15 @@
 Forked from https://github.com/ElementsProject/secp256k1-zkp
+
+The forked repository is tracked into a branch called 'vendor'. The master
+branch of this repository contains our modifications on top of that. To
+update from upstream (note that oddly, secp256k1-zkp has no master, the
+default branch is called like the repository):
+
+    git remote add upstream https://github.com/ElementsProject/secp256k1-zkp
+		git checkout vendor
+		git pull upstream secp256k1-zkp
+		git push origin vendor
+		git checkout master
+		git merge vendor
+		git push
+		
