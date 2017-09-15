@@ -144,7 +144,6 @@ int secp256k1_pedersen_commit_sum(const secp256k1_context* ctx, secp256k1_peders
         secp256k1_gej_add_ge_var(&accj, &accj, &add, NULL);
     }
     if (!secp256k1_gej_is_infinity(&accj)) {
-        size_t sz = 33;
         secp256k1_ge acc;
         secp256k1_ge_set_gej(&acc, &accj);
         secp256k1_pedersen_commitment_save(commit_out, &acc);
