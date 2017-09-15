@@ -135,25 +135,21 @@ int secp256k1_pedersen_commit_sum(const secp256k1_context* ctx, secp256k1_peders
     (void) ctx;
     secp256k1_gej_set_infinity(&accj);
     for (i = 0; i < ncnt; i++) {
-        if (!secp256k1_eckey_pubkey_parse(&add, ncommits[i], 33)) {
-            return 0;
-        }
+        secp256k1_pedersen_commitment_load(&add, ncommits[i]);
         secp256k1_gej_add_ge_var(&accj, &accj, &add, NULL);
     }
     secp256k1_gej_neg(&accj, &accj);
     for (i = 0; i < pcnt; i++) {
-        if (!secp256k1_eckey_pubkey_parse(&add, commits[i], 33)) {
-            return 0;
-        }
+        secp256k1_pedersen_commitment_load(&add, commits[i]);
         secp256k1_gej_add_ge_var(&accj, &accj, &add, NULL);
     }
     if (!secp256k1_gej_is_infinity(&accj)) {
         size_t sz = 33;
         secp256k1_ge acc;
         secp256k1_ge_set_gej(&acc, &accj);
-        ret = secp256k1_eckey_pubkey_serialize(&acc, commit_out, &sz, 1);
+        secp256k1_pedersen_commitment_save(commit_out, &acc);
+        ret = 1;
     }
-
     return ret;
 }
 
