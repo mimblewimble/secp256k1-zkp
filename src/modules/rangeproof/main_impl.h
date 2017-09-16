@@ -121,6 +121,37 @@ int secp256k1_pedersen_blind_sum(const secp256k1_context* ctx, unsigned char *bl
     return 1;
 }
 
+/* Takes two list of 33-byte commitments and sums the first set, subtracts the second and returns the resulting commitment. */
+int secp256k1_pedersen_commit_sum(const secp256k1_context* ctx, secp256k1_pedersen_commitment *commit_out,
+ const secp256k1_pedersen_commitment * const* commits, size_t pcnt, const secp256k1_pedersen_commitment * const* ncommits, size_t ncnt) {
+    secp256k1_gej accj;
+    secp256k1_ge add;
+    size_t i;
+    int ret = 0;
+    VERIFY_CHECK(ctx != NULL);
+    ARG_CHECK(!pcnt || (commits != NULL));
+    ARG_CHECK(!ncnt || (ncommits != NULL));
+    ARG_CHECK(commit_out != NULL);
+    (void) ctx;
+    secp256k1_gej_set_infinity(&accj);
+    for (i = 0; i < ncnt; i++) {
+        secp256k1_pedersen_commitment_load(&add, ncommits[i]);
+        secp256k1_gej_add_ge_var(&accj, &accj, &add, NULL);
+    }
+    secp256k1_gej_neg(&accj, &accj);
+    for (i = 0; i < pcnt; i++) {
+        secp256k1_pedersen_commitment_load(&add, commits[i]);
+        secp256k1_gej_add_ge_var(&accj, &accj, &add, NULL);
+    }
+    if (!secp256k1_gej_is_infinity(&accj)) {
+        secp256k1_ge acc;
+        secp256k1_ge_set_gej(&acc, &accj);
+        secp256k1_pedersen_commitment_save(commit_out, &acc);
+        ret = 1;
+    }
+    return ret;
+}
+
 /* Takes two lists of commitments and sums the first set and subtracts the second and verifies that they sum to excess. */
 int secp256k1_pedersen_verify_tally(const secp256k1_context* ctx, const secp256k1_pedersen_commitment * const* commits, size_t pcnt, const secp256k1_pedersen_commitment * const* ncommits, size_t ncnt) {
     secp256k1_gej accj;
