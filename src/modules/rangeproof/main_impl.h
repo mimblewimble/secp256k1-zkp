@@ -12,6 +12,7 @@
 #include "modules/rangeproof/pedersen_impl.h"
 #include "modules/rangeproof/borromean_impl.h"
 #include "modules/rangeproof/rangeproof_impl.h"
+#include "modules/rangeproof/switch_impl.h"
 
 /** Alternative generator for secp256k1.
  *  This is the sha256 of 'g' after DER encoding (without compression),
@@ -26,6 +27,24 @@ static const secp256k1_generator secp256k1_generator_h_internal = {{
 }};
 
 const secp256k1_generator *secp256k1_generator_h = &secp256k1_generator_h_internal;
+
+/** Alternative-alternative generator for secp256k1.
+ *  This is the sha256 of the sha256 of 'g' after DER encoding (without compression),
+ *  which happens to be a point on the curve.
+ *  sage: gen_h =  hashlib.sha256('0479be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8'.decode('hex'))
+ *  sage: gen_j_input = gen_h.hexdigest()
+ *  sage: gen_j =  hashlib.sha256(gen_j_input.decode('hex'))
+ *  sage: G3 = EllipticCurve ([F (0), F (7)]).lift_x(int(gen_j.hexdigest(),16))
+ *  sage: '%x %x'%G3.xy()
+ */
+
+static const secp256k1_generator secp256k1_generator_j_internal = {{
+    0x11,
+    0xb8, 0x60, 0xf5, 0x67, 0x95, 0xfc, 0x03, 0xf3, 0xc2, 0x16, 0x85, 0x38, 0x3d, 0x1b, 0x5a, 0x2f,
+    0x29, 0x54, 0xf4, 0x9b, 0x7e, 0x39, 0x8b, 0x8d, 0x2a, 0x01, 0x93, 0x93, 0x36, 0x21, 0x15, 0x5f
+}};
+
+const secp256k1_generator *secp256k1_generator_j = &secp256k1_generator_j_internal;
 
 static void secp256k1_pedersen_commitment_load(secp256k1_ge* ge, const secp256k1_pedersen_commitment* commit) {
     secp256k1_fe fe;
@@ -226,6 +245,35 @@ int secp256k1_pedersen_blind_generator_blind_sum(const secp256k1_context* ctx, c
     secp256k1_scalar_clear(&tmp);
     secp256k1_scalar_clear(&sum);
     return 1;
+}
+
+/* Generates a switch commitment: *commit = blind * G3. The commitment is 33 bytes, the blinding factor is 32 bytes.*/
+int secp256k1_switch_commit(const secp256k1_context* ctx, secp256k1_pedersen_commitment *commit, const unsigned char* blind, const secp256k1_generator* gen) {
+    secp256k1_ge genp;
+    secp256k1_gej rj;
+    secp256k1_ge r;
+    secp256k1_scalar sec;
+    int overflow;
+    int ret = 0;
+    VERIFY_CHECK(ctx != NULL);
+    ARG_CHECK(ctx != NULL);
+    ARG_CHECK(secp256k1_ecmult_gen_context_is_built(&ctx->ecmult_gen_switch_ctx));
+    ARG_CHECK(commit != NULL);
+    ARG_CHECK(blind != NULL);
+    ARG_CHECK(gen != NULL);
+    secp256k1_scalar_set_b32(&sec, blind, &overflow);
+    if (!overflow){
+        secp256k1_switch_ecmult(&rj, &sec, &genp);
+        if (!secp256k1_gej_is_infinity(&rj)) {
+            secp256k1_ge_set_gej(&r, &rj);
+            secp256k1_pedersen_commitment_save(commit, &r);
+            ret = 1;
+        }
+        secp256k1_gej_clear(&rj);
+        secp256k1_ge_clear(&r);
+    }
+    secp256k1_scalar_clear(&sec);
+    return ret;
 }
 
 int secp256k1_rangeproof_info(const secp256k1_context* ctx, int *exp, int *mantissa,
