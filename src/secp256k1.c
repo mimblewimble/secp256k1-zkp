@@ -26,6 +26,7 @@
 # include "include/secp256k1_rangeproof.h"
 # include "modules/rangeproof/pedersen.h"
 # include "modules/rangeproof/rangeproof.h"
+# include "modules/rangeproof/switch.h"
 #endif
 
 #define ARG_CHECK(cond) do { \
@@ -61,6 +62,7 @@ static const secp256k1_callback default_error_callback = {
 struct secp256k1_context_struct {
     secp256k1_ecmult_context ecmult_ctx;
     secp256k1_ecmult_gen_context ecmult_gen_ctx;
+    secp256k1_ecmult_gen_context ecmult_gen_switch_ctx;
     secp256k1_callback illegal_callback;
     secp256k1_callback error_callback;
 };
@@ -79,9 +81,11 @@ secp256k1_context* secp256k1_context_create(unsigned int flags) {
 
     secp256k1_ecmult_context_init(&ret->ecmult_ctx);
     secp256k1_ecmult_gen_context_init(&ret->ecmult_gen_ctx);
+    secp256k1_ecmult_gen_context_init(&ret->ecmult_gen_switch_ctx);
 
     if (flags & SECP256K1_FLAGS_BIT_CONTEXT_SIGN) {
         secp256k1_ecmult_gen_context_build(&ret->ecmult_gen_ctx, &ret->error_callback);
+        secp256k1_ecmult_gen_context_build(&ret->ecmult_gen_switch_ctx, &ret->error_callback);
     }
     if (flags & SECP256K1_FLAGS_BIT_CONTEXT_VERIFY) {
         secp256k1_ecmult_context_build(&ret->ecmult_ctx, &ret->error_callback);
@@ -96,6 +100,7 @@ secp256k1_context* secp256k1_context_clone(const secp256k1_context* ctx) {
     ret->error_callback = ctx->error_callback;
     secp256k1_ecmult_context_clone(&ret->ecmult_ctx, &ctx->ecmult_ctx, &ctx->error_callback);
     secp256k1_ecmult_gen_context_clone(&ret->ecmult_gen_ctx, &ctx->ecmult_gen_ctx, &ctx->error_callback);
+    secp256k1_ecmult_gen_context_clone(&ret->ecmult_gen_switch_ctx, &ctx->ecmult_gen_switch_ctx, &ctx->error_callback);
     return ret;
 }
 
@@ -103,7 +108,7 @@ void secp256k1_context_destroy(secp256k1_context* ctx) {
     if (ctx != NULL) {
         secp256k1_ecmult_context_clear(&ctx->ecmult_ctx);
         secp256k1_ecmult_gen_context_clear(&ctx->ecmult_gen_ctx);
-
+        secp256k1_ecmult_gen_context_clear(&ctx->ecmult_gen_switch_ctx);
         free(ctx);
     }
 }
