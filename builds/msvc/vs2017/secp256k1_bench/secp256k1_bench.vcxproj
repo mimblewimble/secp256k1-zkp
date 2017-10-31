@@ -73,7 +73,7 @@
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>$(ProjectDir)..\..\..\..\bin\$(PlatformName)\Debug\$(PlatformToolset)\$(Linkage-secp256k1)\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(ProjectDir)..\..\..\..\bin\Win32\Debug\v141\dynamic;$(ProjectDir)..\..\..\..\bin\$(PlatformName)\Debug\$(PlatformToolset)\$(Linkage-secp256k1)\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>

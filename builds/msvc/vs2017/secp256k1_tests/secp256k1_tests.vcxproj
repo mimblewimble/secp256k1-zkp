@@ -70,7 +70,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugDEXE|Win32'">
     <Link>
-      <AdditionalLibraryDirectories>$(ProjectDir)..\..\..\..\bin\$(PlatformName)\Debug\$(PlatformToolset)\$(Linkage-secp256k1)\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(ProjectDir)..\..\..\..\bin\Win32\Debug\v141\dynamic;$(ProjectDir)..\..\..\..\bin\$(PlatformName)\Debug\$(PlatformToolset)\$(Linkage-secp256k1)\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <ClCompile>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
