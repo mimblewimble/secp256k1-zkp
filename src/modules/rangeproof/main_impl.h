@@ -261,6 +261,7 @@ int secp256k1_switch_commit(const secp256k1_context* ctx, secp256k1_pedersen_com
     ARG_CHECK(commit != NULL);
     ARG_CHECK(blind != NULL);
     ARG_CHECK(gen != NULL);
+    secp256k1_generator_load(&genp, gen);
     secp256k1_scalar_set_b32(&sec, blind, &overflow);
     if (!overflow){
         secp256k1_switch_ecmult(&rj, &sec, &genp);
