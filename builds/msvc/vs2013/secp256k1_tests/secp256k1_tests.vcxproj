@@ -68,6 +68,14 @@
   <PropertyGroup>
     <Option-endomorphism>true</Option-endomorphism>
   </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugDEXE|Win32'">
+    <Link>
+      <AdditionalLibraryDirectories>$(ProjectDir)..\..\..\..\bin\$(PlatformName)\Debug\$(PlatformToolset)\$(Linkage-secp256k1)\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\..\src\tests.c" />
     <ClCompile Include="..\..\..\..\src\tests_exhaustive.c">
@@ -84,5 +92,11 @@
     <ProjectReference Include="..\secp256k1\secp256k1.vcxproj">
       <Project>{148600EA-561B-4C78-A80A-2EB5046D0420}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Xml Include="secp256k1_tests.xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="secp256k1_tests.props" />
   </ItemGroup>
 </Project>

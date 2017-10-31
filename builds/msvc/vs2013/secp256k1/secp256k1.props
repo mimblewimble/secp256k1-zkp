@@ -46,6 +46,9 @@
       <PreprocessorDefinitions Condition="'$(Option-ecdh)' == 'true'">ENABLE_MODULE_ECDH;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Option-recovery)' == 'true'">ENABLE_MODULE_RECOVERY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Option-schnorr)' == 'true'">ENABLE_MODULE_SCHNORR;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+          
+      
+      
     </ClCompile>
   </ItemDefinitionGroup>
 

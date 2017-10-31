@@ -21,4 +21,10 @@
       <Filter>src</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <Xml Include="secp256k1_tests.xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="secp256k1_tests.props" />
+  </ItemGroup>
 </Project>

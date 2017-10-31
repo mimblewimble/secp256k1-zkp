@@ -68,6 +68,14 @@
   <PropertyGroup>
     <Option-endomorphism>true</Option-endomorphism>
   </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugDEXE|Win32'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>$(ProjectDir)..\..\..\..\bin\$(PlatformName)\Debug\$(PlatformToolset)\$(Linkage-secp256k1)\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+  </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\..\src\bench_ecdh.c">
       <ExcludedFromBuild>true</ExcludedFromBuild>
@@ -98,5 +106,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\..\src\bench.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="secp256k1_bench.props" />
+  </ItemGroup>
+  <ItemGroup>
+    <Xml Include="secp256k1_bench.xml" />
   </ItemGroup>
 </Project>

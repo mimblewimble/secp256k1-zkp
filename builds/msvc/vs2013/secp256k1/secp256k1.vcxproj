@@ -75,24 +75,27 @@
     </Option-schnorr>
     <Option-recovery>true</Option-recovery>
   </PropertyGroup>
-  <ItemGroup>
-    <None Include="..\..\..\..\packaging\nuget\gmp\package.bat" />
-    <None Include="..\..\..\..\packaging\nuget\gmp\package.config" />
-    <None Include="..\..\..\..\packaging\nuget\package.bat" />
-    <None Include="..\..\..\..\packaging\nuget\package.config" />
-    <None Include="..\..\..\..\packaging\nuget\package.gsl" />
-    <None Include="..\..\..\..\packaging\nuget\package.nuspec" />
-    <None Include="..\..\..\..\packaging\nuget\package.targets" />
-  </ItemGroup>
-  <ItemGroup>
-    <Xml Include="..\..\..\..\packaging\nuget\package.xml" />
-  </ItemGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugDLL|Win32'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..\..\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>ENABLE_MODULE_SURJECTIONPROOF;ENABLE_MODULE_WHITELIST;ENABLE_MODULE_RANGEPROOF;ENABLE_MODULE_GENERATOR;ENABLE_MODULE_RECOVERY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseDLL|Win32'">
+    <ClCompile>
+      <PreprocessorDefinitions>ENABLE_MODULE_SURJECTIONPROOF;ENABLE_MODULE_WHITELIST;ENABLE_MODULE_RANGEPROOF;ENABLE_MODULE_GENERATOR;ENABLE_MODULE_RECOVERY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\..\contrib\lax_der_parsing.h" />
     <ClInclude Include="..\..\..\..\contrib\lax_der_privatekey_parsing.h" />
     <ClInclude Include="..\..\..\..\include\secp256k1.h" />
     <ClInclude Include="..\..\..\..\include\secp256k1_ecdh.h" />
+    <ClInclude Include="..\..\..\..\include\secp256k1_generator.h" />
+    <ClInclude Include="..\..\..\..\include\secp256k1_rangeproof.h" />
     <ClInclude Include="..\..\..\..\include\secp256k1_recovery.h" />
+    <ClInclude Include="..\..\..\..\include\secp256k1_surjectionproof.h" />
+    <ClInclude Include="..\..\..\..\include\secp256k1_whitelist.h" />
     <ClInclude Include="..\..\..\..\src\basic-config.h" />
     <ClInclude Include="..\..\..\..\src\ecdsa.h" />
     <ClInclude Include="..\..\..\..\src\ecdsa_impl.h" />
@@ -118,12 +121,28 @@
     <ClInclude Include="..\..\..\..\src\hash_impl.h" />
     <ClInclude Include="..\..\..\..\src\modules\ecdh\main_impl.h" />
     <ClInclude Include="..\..\..\..\src\modules\ecdh\tests_impl.h" />
+    <ClInclude Include="..\..\..\..\src\modules\generator\main_impl.h" />
+    <ClInclude Include="..\..\..\..\src\modules\generator\tests_impl.h" />
+    <ClInclude Include="..\..\..\..\src\modules\rangeproof\borromean.h" />
+    <ClInclude Include="..\..\..\..\src\modules\rangeproof\borromean_impl.h" />
+    <ClInclude Include="..\..\..\..\src\modules\rangeproof\main_impl.h" />
+    <ClInclude Include="..\..\..\..\src\modules\rangeproof\pedersen.h" />
+    <ClInclude Include="..\..\..\..\src\modules\rangeproof\pedersen_impl.h" />
+    <ClInclude Include="..\..\..\..\src\modules\rangeproof\rangeproof.h" />
+    <ClInclude Include="..\..\..\..\src\modules\rangeproof\rangeproof_impl.h" />
+    <ClInclude Include="..\..\..\..\src\modules\rangeproof\switch.h" />
+    <ClInclude Include="..\..\..\..\src\modules\rangeproof\switch_impl.h" />
+    <ClInclude Include="..\..\..\..\src\modules\rangeproof\tests_impl.h" />
     <ClInclude Include="..\..\..\..\src\modules\recovery\main_impl.h" />
     <ClInclude Include="..\..\..\..\src\modules\recovery\tests_impl.h" />
-    <ClInclude Include="..\..\..\..\src\modules\schnorr\main_impl.h" />
-    <ClInclude Include="..\..\..\..\src\modules\schnorr\schnorr.h" />
-    <ClInclude Include="..\..\..\..\src\modules\schnorr\schnorr_impl.h" />
     <ClInclude Include="..\..\..\..\src\modules\schnorr\tests_impl.h" />
+    <ClInclude Include="..\..\..\..\src\modules\surjection\main_impl.h" />
+    <ClInclude Include="..\..\..\..\src\modules\surjection\surjection.h" />
+    <ClInclude Include="..\..\..\..\src\modules\surjection\surjection_impl.h" />
+    <ClInclude Include="..\..\..\..\src\modules\surjection\tests_impl.h" />
+    <ClInclude Include="..\..\..\..\src\modules\whitelist\main_impl.h" />
+    <ClInclude Include="..\..\..\..\src\modules\whitelist\tests_impl.h" />
+    <ClInclude Include="..\..\..\..\src\modules\whitelist\whitelist_impl.h" />
     <ClInclude Include="..\..\..\..\src\num.h" />
     <ClInclude Include="..\..\..\..\src\num_gmp.h" />
     <ClInclude Include="..\..\..\..\src\num_gmp_impl.h" />
@@ -146,6 +165,12 @@
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\..\resource.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="secp256k1.props" />
+  </ItemGroup>
+  <ItemGroup>
+    <Xml Include="secp256k1.xml" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionSettings" />

@@ -1,29 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <None Include="..\..\..\..\packaging\nuget\package.gsl">
-      <Filter>packaging</Filter>
-    </None>
-    <None Include="..\..\..\..\packaging\nuget\package.nuspec">
-      <Filter>packaging</Filter>
-    </None>
-    <None Include="..\..\..\..\packaging\nuget\package.targets">
-      <Filter>packaging</Filter>
-    </None>
-    <None Include="..\..\..\..\packaging\nuget\package.bat">
-      <Filter>packaging</Filter>
-    </None>
-    <None Include="..\..\..\..\packaging\nuget\package.config">
-      <Filter>packaging</Filter>
-    </None>
-    <None Include="..\..\..\..\packaging\nuget\gmp\package.config">
-      <Filter>packaging\gmp</Filter>
-    </None>
-    <None Include="..\..\..\..\packaging\nuget\gmp\package.bat">
-      <Filter>packaging\gmp</Filter>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
     <Filter Include="resource">
       <UniqueIdentifier>{db47c290-c7de-4be7-965c-e1a3ea4d1c4f}</UniqueIdentifier>
     </Filter>
@@ -57,6 +34,18 @@
     <Filter Include="src\modules\ecdh">
       <UniqueIdentifier>{2e005bbf-94fb-4114-8453-222dd6850262}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\modules\generator">
+      <UniqueIdentifier>{32cf3afa-8cd7-4e5f-8e72-492e37b5d4d5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\modules\rangeproof">
+      <UniqueIdentifier>{e896487a-c958-4a1e-a09a-18cd899a45e8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\modules\surjection">
+      <UniqueIdentifier>{e9c47b82-f4d2-435f-b83d-8a64fc66d39b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\modules\whitelist">
+      <UniqueIdentifier>{a11fd8d4-6be5-4604-81cd-9a43bfe16dc2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\..\include\secp256k1.h">
@@ -89,16 +78,7 @@
     <ClInclude Include="..\..\..\..\src\modules\recovery\main_impl.h">
       <Filter>src\modules\recovery</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\..\src\modules\schnorr\schnorr_impl.h">
-      <Filter>src\modules\schnorr</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\..\src\modules\schnorr\tests_impl.h">
-      <Filter>src\modules\schnorr</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\..\src\modules\schnorr\main_impl.h">
-      <Filter>src\modules\schnorr</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\..\src\modules\schnorr\schnorr.h">
       <Filter>src\modules\schnorr</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\..\src\field.h">
@@ -209,11 +189,75 @@
     <ClInclude Include="..\..\..\..\src\ecmult_impl.h">
       <Filter>src\include</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <Xml Include="..\..\..\..\packaging\nuget\package.xml">
-      <Filter>packaging</Filter>
-    </Xml>
+    <ClInclude Include="..\..\..\..\include\secp256k1_generator.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\include\secp256k1_rangeproof.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\include\secp256k1_surjectionproof.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\include\secp256k1_whitelist.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\src\modules\whitelist\main_impl.h">
+      <Filter>src\modules\whitelist</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\src\modules\whitelist\tests_impl.h">
+      <Filter>src\modules\whitelist</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\src\modules\whitelist\whitelist_impl.h">
+      <Filter>src\modules\whitelist</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\src\modules\surjection\main_impl.h">
+      <Filter>src\modules\surjection</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\src\modules\surjection\surjection.h">
+      <Filter>src\modules\surjection</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\src\modules\surjection\surjection_impl.h">
+      <Filter>src\modules\surjection</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\src\modules\surjection\tests_impl.h">
+      <Filter>src\modules\surjection</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\src\modules\rangeproof\borromean.h">
+      <Filter>src\modules\rangeproof</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\src\modules\rangeproof\borromean_impl.h">
+      <Filter>src\modules\rangeproof</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\src\modules\rangeproof\main_impl.h">
+      <Filter>src\modules\rangeproof</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\src\modules\rangeproof\pedersen.h">
+      <Filter>src\modules\rangeproof</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\src\modules\rangeproof\pedersen_impl.h">
+      <Filter>src\modules\rangeproof</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\src\modules\rangeproof\rangeproof.h">
+      <Filter>src\modules\rangeproof</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\src\modules\rangeproof\rangeproof_impl.h">
+      <Filter>src\modules\rangeproof</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\src\modules\rangeproof\switch.h">
+      <Filter>src\modules\rangeproof</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\src\modules\rangeproof\switch_impl.h">
+      <Filter>src\modules\rangeproof</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\src\modules\rangeproof\tests_impl.h">
+      <Filter>src\modules\rangeproof</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\src\modules\generator\main_impl.h">
+      <Filter>src\modules\generator</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\src\modules\generator\tests_impl.h">
+      <Filter>src\modules\generator</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\..\src\secp256k1.c">
@@ -230,5 +274,11 @@
     <ResourceCompile Include="..\..\resource.rc">
       <Filter>resource</Filter>
     </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="secp256k1.props" />
+  </ItemGroup>
+  <ItemGroup>
+    <Xml Include="secp256k1.xml" />
   </ItemGroup>
 </Project>

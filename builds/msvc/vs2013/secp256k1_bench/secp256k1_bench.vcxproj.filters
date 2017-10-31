@@ -33,4 +33,10 @@
       <Filter>src</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="secp256k1_bench.props" />
+  </ItemGroup>
+  <ItemGroup>
+    <Xml Include="secp256k1_bench.xml" />
+  </ItemGroup>
 </Project>
