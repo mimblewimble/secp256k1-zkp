@@ -86,6 +86,56 @@
       <PreprocessorDefinitions>ENABLE_MODULE_SURJECTIONPROOF;ENABLE_MODULE_WHITELIST;ENABLE_MODULE_RANGEPROOF;ENABLE_MODULE_GENERATOR;ENABLE_MODULE_RECOVERY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugLIB|Win32'">
+    <ClCompile>
+      <PreprocessorDefinitions>ENABLE_MODULE_SURJECTIONPROOF;ENABLE_MODULE_WHITELIST;ENABLE_MODULE_RANGEPROOF;ENABLE_MODULE_GENERATOR;ENABLE_MODULE_RECOVERY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugLTCG|Win32'">
+    <ClCompile>
+      <PreprocessorDefinitions>ENABLE_MODULE_SURJECTIONPROOF;ENABLE_MODULE_WHITELIST;ENABLE_MODULE_RANGEPROOF;ENABLE_MODULE_GENERATOR;ENABLE_MODULE_RECOVERY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseLIB|Win32'">
+    <ClCompile>
+      <PreprocessorDefinitions>ENABLE_MODULE_SURJECTIONPROOF;ENABLE_MODULE_WHITELIST;ENABLE_MODULE_RANGEPROOF;ENABLE_MODULE_GENERATOR;ENABLE_MODULE_RECOVERY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseLTCG|Win32'">
+    <ClCompile>
+      <PreprocessorDefinitions>ENABLE_MODULE_SURJECTIONPROOF;ENABLE_MODULE_WHITELIST;ENABLE_MODULE_RANGEPROOF;ENABLE_MODULE_GENERATOR;ENABLE_MODULE_RECOVERY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugDLL|x64'">
+    <ClCompile>
+      <PreprocessorDefinitions>ENABLE_MODULE_SURJECTIONPROOF;ENABLE_MODULE_WHITELIST;ENABLE_MODULE_RANGEPROOF;ENABLE_MODULE_GENERATOR;ENABLE_MODULE_RECOVERY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugLIB|x64'">
+    <ClCompile>
+      <PreprocessorDefinitions>ENABLE_MODULE_SURJECTIONPROOF;ENABLE_MODULE_WHITELIST;ENABLE_MODULE_RANGEPROOF;ENABLE_MODULE_GENERATOR;ENABLE_MODULE_RECOVERY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugLTCG|x64'">
+    <ClCompile>
+      <PreprocessorDefinitions>ENABLE_MODULE_SURJECTIONPROOF;ENABLE_MODULE_WHITELIST;ENABLE_MODULE_RANGEPROOF;ENABLE_MODULE_GENERATOR;ENABLE_MODULE_RECOVERY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseDLL|x64'">
+    <ClCompile>
+      <PreprocessorDefinitions>ENABLE_MODULE_SURJECTIONPROOF;ENABLE_MODULE_WHITELIST;ENABLE_MODULE_RANGEPROOF;ENABLE_MODULE_GENERATOR;ENABLE_MODULE_RECOVERY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseLIB|x64'">
+    <ClCompile>
+      <PreprocessorDefinitions>ENABLE_MODULE_SURJECTIONPROOF;ENABLE_MODULE_WHITELIST;ENABLE_MODULE_RANGEPROOF;ENABLE_MODULE_GENERATOR;ENABLE_MODULE_RECOVERY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseLTCG|x64'">
+    <ClCompile>
+      <PreprocessorDefinitions>ENABLE_MODULE_SURJECTIONPROOF;ENABLE_MODULE_WHITELIST;ENABLE_MODULE_RANGEPROOF;ENABLE_MODULE_GENERATOR;ENABLE_MODULE_RECOVERY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\..\contrib\lax_der_parsing.h" />
     <ClInclude Include="..\..\..\..\contrib\lax_der_privatekey_parsing.h" />
