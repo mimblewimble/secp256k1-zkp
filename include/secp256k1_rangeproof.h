@@ -109,7 +109,7 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_pedersen_blind_sum(
  *         ncnt:       number of commitments pointed to by ncommits.
  *  Out:   commit_out: pointer to the commitment (cannot be NULL)
  */
-SECP256K1_WARN_UNUSED_RESULT int secp256k1_pedersen_commit_sum(
+SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_pedersen_commit_sum(
   const secp256k1_context* ctx,
   secp256k1_pedersen_commitment *commit_out,
   const secp256k1_pedersen_commitment * const* commits,
