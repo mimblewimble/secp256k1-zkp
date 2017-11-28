@@ -768,60 +768,39 @@ static int secp256k1_pippenger_bucket_window(size_t n) {
 #endif
 }
 
+/**
+ * Returns the maximum optimal number of points for a bucket_window.
+ */
 static size_t secp256k1_pippenger_bucket_window_inv(int bucket_window) {
+    switch(bucket_window) {
 #ifdef USE_ENDOMORPHISM
-    if(bucket_window == 1) {
-        return 4;
-    } else if(bucket_window == 2) {
-        return 8;
-    } else if(bucket_window == 3) {
-        return 40;
-    } else if(bucket_window == 4) {
-        return 117;
-    } else if(bucket_window == 5) {
-        return 280;
-    } else if(bucket_window == 6) {
-        return 480;
-    } else if(bucket_window == 7) {
-        return 2560;
-    } else if(bucket_window == 8) {
-        return 2560;
-    } else if(bucket_window == 9) {
-        return 9200;
-    } else if(bucket_window == 10) {
-        return 17400;
-    } else if(bucket_window == 11) {
-        return 28600;
-    } else if(bucket_window == PIPPENGER_MAX_BUCKET_WINDOW) {
-        return SIZE_MAX;
-    }
+        case 1: return 4;
+        case 2: return 8;
+        case 3: return 40;
+        case 4: return 117;
+        case 5: return 280;
+        case 6: return 480;
+        case 7: return 2560;
+        case 8: return 2560;
+        case 9: return 9200;
+        case 10: return 17400;
+        case 11: return 28600;
+        case PIPPENGER_MAX_BUCKET_WINDOW: return SIZE_MAX;
 #else
-    if(bucket_window == 1) {
-        return 2;
-    } else if(bucket_window == 2) {
-        return 9;
-    } else if(bucket_window == 3) {
-        return 42;
-    } else if(bucket_window == 4) {
-        return 100;
-    } else if(bucket_window == 5) {
-        return 280;
-    } else if(bucket_window == 6) {
-        return 610;
-    } else if(bucket_window == 7) {
-        return 1920;
-    } else if(bucket_window == 8) {
-        return 3400;
-    } else if(bucket_window == 9) {
-        return 10240;
-    } else if(bucket_window == 10) {
-        return 19000;
-    } else if(bucket_window == 11) {
-        return 35000;
-    } else if(bucket_window == PIPPENGER_MAX_BUCKET_WINDOW) {
-        return SIZE_MAX;
-    }
+        case 1: return 2;
+        case 2: return 9;
+        case 3: return 42;
+        case 4: return 100;
+        case 5: return 280;
+        case 6: return 610;
+        case 7: return 1920;
+        case 8: return 3400;
+        case 9: return 10240;
+        case 10: return 19000;
+        case 11: return 35000;
+        case PIPPENGER_MAX_BUCKET_WINDOW: return SIZE_MAX;
 #endif
+    }
     return 0;
 }
 
@@ -964,7 +943,7 @@ static size_t secp256k1_pippenger_max_points(secp256k1_scratch *scratch) {
         if (n_points > res) {
             res = n_points;
         }
-        if(n_points < max_points) {
+        if (n_points < max_points) {
             /* A larger bucket_window may support even more points. But if we
              * would choose that then the caller couldn't safely use any number
              * smaller than what this function returns */
@@ -1002,8 +981,8 @@ static int secp256k1_ecmult_multi_var(const secp256k1_ecmult_context *ctx, secp2
     n_batches = (n+max_points-1)/max_points;
     n_batch_points = (n+n_batches-1)/n_batches;
 
-    if(n_batch_points >= ECMULT_PIPPENGER_THRESHOLD) {
-        f = &secp256k1_ecmult_pippenger_batch;
+    if (n_batch_points >= ECMULT_PIPPENGER_THRESHOLD) {
+        f = secp256k1_ecmult_pippenger_batch;
     } else {
         max_points = secp256k1_strauss_max_points(scratch);
         if (max_points == 0) {
@@ -1011,13 +990,13 @@ static int secp256k1_ecmult_multi_var(const secp256k1_ecmult_context *ctx, secp2
         }
         n_batches = (n+max_points-1)/max_points;
         n_batch_points = (n+n_batches-1)/n_batches;
-        f = &secp256k1_ecmult_strauss_batch;
+        f = secp256k1_ecmult_strauss_batch;
     }
     for(i = 0; i < n_batches; i++) {
         size_t nbp = n < n_batch_points ? n : n_batch_points;
         size_t offset = n_batch_points*i;
         secp256k1_gej tmp;
-        if(!(*f)(ctx, scratch, error_callback, &tmp, i == 0 ? inp_g_sc : NULL, cb, cbdata, nbp, offset)) {
+        if (!f(ctx, scratch, error_callback, &tmp, i == 0 ? inp_g_sc : NULL, cb, cbdata, nbp, offset)) {
             return 0;
         }
         secp256k1_gej_add_var(r, r, &tmp, NULL);

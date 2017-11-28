@@ -2898,14 +2898,14 @@ void run_ecmult_multi_tests(void) {
     test_secp256k1_pippenger_bucket_window_inv();
     test_ecmult_multi_pippenger_max_points();
     scratch = secp256k1_scratch_create(&ctx->error_callback, 0, 819200);
-    test_ecmult_multi(scratch, &secp256k1_ecmult_multi_var);
-    test_ecmult_multi(scratch, &secp256k1_ecmult_pippenger_batch_single);
-    test_ecmult_multi(scratch, &secp256k1_ecmult_strauss_batch_single);
+    test_ecmult_multi(scratch, secp256k1_ecmult_multi_var);
+    test_ecmult_multi(scratch, secp256k1_ecmult_pippenger_batch_single);
+    test_ecmult_multi(scratch, secp256k1_ecmult_strauss_batch_single);
     secp256k1_scratch_destroy(scratch);
 
     /* Run test_ecmult_multi with space for exactly one point */
     scratch = secp256k1_scratch_create(&ctx->error_callback, 0, secp256k1_strauss_scratch_size(1) + STRAUSS_SCRATCH_OBJECTS*ALIGNMENT);
-    test_ecmult_multi(scratch, &secp256k1_ecmult_multi_var);
+    test_ecmult_multi(scratch, secp256k1_ecmult_multi_var);
     secp256k1_scratch_destroy(scratch);
 
     test_ecmult_multi_batching();
