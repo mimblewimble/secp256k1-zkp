@@ -1,8 +1,8 @@
-/**********************************************************************
- * Copyright (c) 2013, 2014, 2017 Pieter Wuille, Andrew Poelstra      *
- * Distributed under the MIT software license, see the accompanying   *
- * file COPYING or http://www.opensource.org/licenses/mit-license.php.*
- **********************************************************************/
+/*****************************************************************************
+ * Copyright (c) 2013, 2014, 2017 Pieter Wuille, Andrew Poelstra, Jonas Nick *
+ * Distributed under the MIT software license, see the accompanying          *
+ * file COPYING or http://www.opensource.org/licenses/mit-license.php.       *
+ *****************************************************************************/
 
 #ifndef SECP256K1_ECMULT_IMPL_H
 #define SECP256K1_ECMULT_IMPL_H
@@ -561,8 +561,7 @@ static size_t secp256k1_strauss_max_points(secp256k1_scratch *scratch) {
 /** Convert a number to WNAF notation.
  *  The number becomes represented by sum(2^{wi} * wnaf[i], i=0..WNAF_SIZE(w)+1) - return_val.
  *  It has the following guarantees:
- *  - each wnaf[i] an odd integer between -(1 << w) and (1 << w)
- *  - each wnaf[i] is nonzero, unless the given number is 0
+ *  - each wnaf[i] is either 0 or an odd integer between -(1 << w) and (1 << w)
  *  - the number of words set is always WNAF_SIZE(w)
  *  - the returned skew is 0 without endomorphism, or 0 or 1 with endomorphism
  */
@@ -670,16 +669,16 @@ static int secp256k1_ecmult_pippenger_wnaf(secp256k1_gej *buckets, int bucket_wi
             secp256k1_ge tmp;
             int idx;
 
-            if (i == 0) {
 #ifdef USE_ENDOMORPHISM
+            if (i == 0) {
                 /* correct for wnaf skew */
                 int skew = point_state.skew_na;
                 if (skew) {
                     secp256k1_ge_neg(&tmp, &pt[point_state.input_pos]);
                     secp256k1_gej_add_ge_var(&buckets[0], &buckets[0], &tmp, NULL);
                 }
-#endif
             }
+#endif
             if (n > 0) {
                 idx = (n - 1)/2;
                 secp256k1_gej_add_ge_var(&buckets[idx], &buckets[idx], &pt[point_state.input_pos], NULL);
@@ -691,6 +690,13 @@ static int secp256k1_ecmult_pippenger_wnaf(secp256k1_gej *buckets, int bucket_wi
         }
         secp256k1_gej_set_infinity(&running_sum);
         secp256k1_gej_set_infinity(&walking_sum);
+        /* Compute walking_sum as bucket[0] + 3*bucket[1] + 5*bucket[2] + ...
+         * by first setting
+         * running_sum = bucket[0] +   bucket[1] +   bucket[2] + ...
+         * walking_sum = bucket[0] + 2*bucket[1] + 3*bucket[2] + ...
+         * and then computing
+         * walking_sum = 2*walking_sum - running_sum
+         */
         for(j = ECMULT_TABLE_SIZE(bucket_window+2) - 1; j >= 0; j--) {
             secp256k1_gej_add_var(&running_sum, &running_sum, &buckets[j], NULL);
             secp256k1_gej_add_var(&walking_sum, &walking_sum, &running_sum, NULL);
