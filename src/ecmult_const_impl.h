@@ -4,15 +4,13 @@
  * file COPYING or http://www.opensource.org/licenses/mit-license.php.*
  **********************************************************************/
 
-#ifndef _SECP256K1_ECMULT_CONST_IMPL_
-#define _SECP256K1_ECMULT_CONST_IMPL_
+#ifndef SECP256K1_ECMULT_CONST_IMPL_H
+#define SECP256K1_ECMULT_CONST_IMPL_H
 
 #include "scalar.h"
 #include "group.h"
 #include "ecmult_const.h"
 #include "ecmult_impl.h"
-
-#define WNAF_SIZE(bits, w) (((bits) + (w) - 1) / (w))
 
 /* This is like `ECMULT_TABLE_GET_GE` but is constant time */
 #define ECMULT_CONST_TABLE_GET_GE(r,pre,n,w) do { \
@@ -261,4 +259,4 @@ static void secp256k1_ecmult_const(secp256k1_gej *r, const secp256k1_ge *a, cons
     }
 }
 
-#endif
+#endif /* SECP256K1_ECMULT_CONST_IMPL_H */

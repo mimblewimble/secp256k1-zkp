@@ -1,9 +1,9 @@
-#ifndef _SECP256K1_
-# define _SECP256K1_
+#ifndef SECP256K1_H
+#define SECP256K1_H
 
-# ifdef __cplusplus
+#ifdef __cplusplus
 extern "C" {
-# endif
+#endif
 
 #include <stddef.h>
 
@@ -264,7 +264,7 @@ SECP256K1_API void secp256k1_context_set_error_callback(
  *  Returns: a newly created scratch space.
  *  Args: ctx:  an existing context object (cannot be NULL)
  *  In:  init_size: initial amount of memory to allocate
- *        max_size: maximum amount of memory to allocat
+ *        max_size: maximum amount of memory to allocate
  */
 SECP256K1_API SECP256K1_WARN_UNUSED_RESULT secp256k1_scratch_space* secp256k1_scratch_space_create(
     const secp256k1_context* ctx,
@@ -652,8 +652,8 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_ec_pubkey_combine(
     size_t n
 ) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3);
 
-# ifdef __cplusplus
+#ifdef __cplusplus
 }
-# endif
-
 #endif
+
+#endif /* SECP256K1_H */

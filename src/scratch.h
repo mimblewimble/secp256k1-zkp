@@ -7,6 +7,8 @@
 #ifndef _SECP256K1_SCRATCH_
 #define _SECP256K1_SCRATCH_
 
+#include <sys/types.h>
+
 /* The typedef is used internally; the struct name is used in the public API
  * (where it is exposed as a different typedef) */
 typedef struct secp256k1_scratch_space_struct {
@@ -20,10 +22,10 @@ static secp256k1_scratch* secp256k1_scratch_create(const secp256k1_callback* err
 static void secp256k1_scratch_destroy(secp256k1_scratch* scratch);
 
 /** Returns the maximum allocation the scratch space will allow */
-static size_t secp256k1_scratch_max_allocation(const secp256k1_scratch* scratch);
+static size_t secp256k1_scratch_max_allocation(const secp256k1_scratch* scratch, size_t n_objects);
 
 /** Attempts to allocate so that there are `n` available bytes. Returns 1 on success, 0 on failure */
-static int secp256k1_scratch_resize(secp256k1_scratch* scratch, const secp256k1_callback* error_callback, size_t n);
+static int secp256k1_scratch_resize(secp256k1_scratch* scratch, const secp256k1_callback* error_callback, size_t n, size_t n_objects);
 
 /** Returns a pointer into the scratch space or NULL if there is insufficient available space */
 static void *secp256k1_scratch_alloc(secp256k1_scratch* scratch, size_t n);
@@ -32,4 +34,3 @@ static void *secp256k1_scratch_alloc(secp256k1_scratch* scratch, size_t n);
 static void secp256k1_scratch_reset(secp256k1_scratch* scratch);
 
 #endif
-

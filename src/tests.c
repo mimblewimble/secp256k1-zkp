@@ -315,12 +315,14 @@ void run_scratch_tests(void) {
     CHECK(ecount == 1);
 
     /* Test internal API */
-    CHECK(secp256k1_scratch_max_allocation(scratch) == 1000);
-    CHECK(secp256k1_scratch_resize(scratch, &ctx->error_callback, 50) == 1);  /* no-op */
-    CHECK(secp256k1_scratch_resize(scratch, &ctx->error_callback, 200) == 1);
-    CHECK(secp256k1_scratch_resize(scratch, &ctx->error_callback, 1000) == 1);
-    CHECK(secp256k1_scratch_resize(scratch, &ctx->error_callback, 2000) == 0);
-    CHECK(secp256k1_scratch_max_allocation(scratch) == 1000);
+    CHECK(secp256k1_scratch_max_allocation(scratch, 0) == 1000);
+    CHECK(secp256k1_scratch_max_allocation(scratch, 1) < 1000);
+    CHECK(secp256k1_scratch_resize(scratch, &ctx->error_callback, 50, 1) == 1);  /* no-op */
+    CHECK(secp256k1_scratch_resize(scratch, &ctx->error_callback, 200, 1) == 1);
+    CHECK(secp256k1_scratch_resize(scratch, &ctx->error_callback, 950, 1) == 1);
+    CHECK(secp256k1_scratch_resize(scratch, &ctx->error_callback, 1000, 1) == 0);
+    CHECK(secp256k1_scratch_resize(scratch, &ctx->error_callback, 2000, 1) == 0);
+    CHECK(secp256k1_scratch_max_allocation(scratch, 0) == 1000);
 
     /* cleanup */
     secp256k1_scratch_space_destroy(scratch);
@@ -349,7 +351,7 @@ void run_sha256_tests(void) {
     int i;
     for (i = 0; i < 8; i++) {
         unsigned char out[32];
-        secp256k1_sha256_t hasher;
+        secp256k1_sha256 hasher;
         secp256k1_sha256_initialize(&hasher);
         secp256k1_sha256_write(&hasher, (const unsigned char*)(inputs[i]), strlen(inputs[i]));
         secp256k1_sha256_finalize(&hasher, out);
@@ -392,7 +394,7 @@ void run_hmac_sha256_tests(void) {
     };
     int i;
     for (i = 0; i < 6; i++) {
-        secp256k1_hmac_sha256_t hasher;
+        secp256k1_hmac_sha256 hasher;
         unsigned char out[32];
         secp256k1_hmac_sha256_initialize(&hasher, (const unsigned char*)(keys[i]), strlen(keys[i]));
         secp256k1_hmac_sha256_write(&hasher, (const unsigned char*)(inputs[i]), strlen(inputs[i]));
@@ -424,7 +426,7 @@ void run_rfc6979_hmac_sha256_tests(void) {
         {0x75, 0x97, 0x88, 0x7c, 0xbd, 0x76, 0x32, 0x1f, 0x32, 0xe3, 0x04, 0x40, 0x67, 0x9a, 0x22, 0xcf, 0x7f, 0x8d, 0x9d, 0x2e, 0xac, 0x39, 0x0e, 0x58, 0x1f, 0xea, 0x09, 0x1c, 0xe2, 0x02, 0xba, 0x94}
     };
 
-    secp256k1_rfc6979_hmac_sha256_t rng;
+    secp256k1_rfc6979_hmac_sha256 rng;
     unsigned char out[32];
     int i;
 
@@ -2603,7 +2605,15 @@ static int ecmult_multi_callback(secp256k1_scalar *sc, secp256k1_ge *pt, size_t 
     return 1;
 }
 
-void run_ecmult_multi_tests(void) {
+static int ecmult_multi_false_callback(secp256k1_scalar *sc, secp256k1_ge *pt, size_t idx, void *cbdata) {
+    (void)sc;
+    (void)pt;
+    (void)idx;
+    (void)cbdata;
+    return 0;
+}
+
+void test_ecmult_multi(secp256k1_scratch *scratch, secp256k1_ecmult_multi_func ecmult_multi) {
     int ncount;
     secp256k1_scalar szero;
     secp256k1_scalar sc[32];
@@ -2611,12 +2621,15 @@ void run_ecmult_multi_tests(void) {
     secp256k1_gej r;
     secp256k1_gej r2;
     ecmult_multi_data data;
-    secp256k1_scratch *scratch = secp256k1_scratch_create(&ctx->error_callback, 1024, 4096);
+    secp256k1_scratch *scratch_empty;
 
     data.sc = sc;
     data.pt = pt;
-
     secp256k1_scalar_set_int(&szero, 0);
+    secp256k1_scratch_reset(scratch);
+
+    /* No points to multiply */
+    CHECK(ecmult_multi(&ctx->ecmult_ctx, scratch, &ctx->error_callback, &r, NULL, ecmult_multi_callback, &data, 0));
 
     /* Check 1- and 2-point multiplies against ecmult */
     for (ncount = 0; ncount < count; ncount++) {
@@ -2630,23 +2643,38 @@ void run_ecmult_multi_tests(void) {
         pt[0] = ptg;
         pt[1] = secp256k1_ge_const_g;
 
-        /* 1-point */
-        secp256k1_ecmult(&ctx->ecmult_ctx, &r2, &ptgj, &sc[0], &szero);
-        secp256k1_ecmult_multi(&ctx->ecmult_ctx, scratch, &ctx->error_callback, &r, &szero, ecmult_multi_callback, &data, 1);
+        /* only G scalar */
+        secp256k1_ecmult(&ctx->ecmult_ctx, &r2, &ptgj, &szero, &sc[0]);
+        CHECK(ecmult_multi(&ctx->ecmult_ctx, scratch, &ctx->error_callback, &r, &sc[0], ecmult_multi_callback, &data, 0));
         secp256k1_gej_neg(&r2, &r2);
         secp256k1_gej_add_var(&r, &r, &r2, NULL);
         CHECK(secp256k1_gej_is_infinity(&r));
 
+        /* 1-point */
+        secp256k1_ecmult(&ctx->ecmult_ctx, &r2, &ptgj, &sc[0], &szero);
+        CHECK(ecmult_multi(&ctx->ecmult_ctx, scratch, &ctx->error_callback, &r, &szero, ecmult_multi_callback, &data, 1));
+        secp256k1_gej_neg(&r2, &r2);
+        secp256k1_gej_add_var(&r, &r, &r2, NULL);
+        CHECK(secp256k1_gej_is_infinity(&r));
+
+        /* Try to multiply 1 point, but scratch space is empty */
+        scratch_empty = secp256k1_scratch_create(&ctx->error_callback, 0, 0);
+        CHECK(!ecmult_multi(&ctx->ecmult_ctx, scratch_empty, &ctx->error_callback, &r, &szero, ecmult_multi_callback, &data, 1));
+        secp256k1_scratch_destroy(scratch_empty);
+
+        /* Try to multiply 1 point, but callback returns false */
+        CHECK(!ecmult_multi(&ctx->ecmult_ctx, scratch, &ctx->error_callback, &r, &szero, ecmult_multi_false_callback, &data, 1));
+
         /* 2-point */
         secp256k1_ecmult(&ctx->ecmult_ctx, &r2, &ptgj, &sc[0], &sc[1]);
-        secp256k1_ecmult_multi(&ctx->ecmult_ctx, scratch, &ctx->error_callback, &r, &szero, ecmult_multi_callback, &data, 2);
+        CHECK(ecmult_multi(&ctx->ecmult_ctx, scratch, &ctx->error_callback, &r, &szero, ecmult_multi_callback, &data, 2));
         secp256k1_gej_neg(&r2, &r2);
         secp256k1_gej_add_var(&r, &r, &r2, NULL);
         CHECK(secp256k1_gej_is_infinity(&r));
 
         /* 2-point with G scalar */
         secp256k1_ecmult(&ctx->ecmult_ctx, &r2, &ptgj, &sc[0], &sc[1]);
-        secp256k1_ecmult_multi(&ctx->ecmult_ctx, scratch, &ctx->error_callback, &r, &sc[1], ecmult_multi_callback, &data, 1);
+        CHECK(ecmult_multi(&ctx->ecmult_ctx, scratch, &ctx->error_callback, &r, &sc[1], ecmult_multi_callback, &data, 1));
         secp256k1_gej_neg(&r2, &r2);
         secp256k1_gej_add_var(&r, &r, &r2, NULL);
         CHECK(secp256k1_gej_is_infinity(&r));
@@ -2663,7 +2691,7 @@ void run_ecmult_multi_tests(void) {
                 random_scalar_order(&sc[i]);
                 secp256k1_ge_set_infinity(&pt[i]);
             }
-            secp256k1_ecmult_multi(&ctx->ecmult_ctx, scratch, &ctx->error_callback, &r, &szero, ecmult_multi_callback, &data, sizes[j]);
+            CHECK(ecmult_multi(&ctx->ecmult_ctx, scratch, &ctx->error_callback, &r, &szero, ecmult_multi_callback, &data, sizes[j]));
             CHECK(secp256k1_gej_is_infinity(&r));
         }
 
@@ -2673,7 +2701,7 @@ void run_ecmult_multi_tests(void) {
                 pt[i] = ptg;
                 secp256k1_scalar_set_int(&sc[i], 0);
             }
-            secp256k1_ecmult_multi(&ctx->ecmult_ctx, scratch, &ctx->error_callback, &r, &szero, ecmult_multi_callback, &data, sizes[j]);
+            CHECK(ecmult_multi(&ctx->ecmult_ctx, scratch, &ctx->error_callback, &r, &szero, ecmult_multi_callback, &data, sizes[j]));
             CHECK(secp256k1_gej_is_infinity(&r));
         }
 
@@ -2686,7 +2714,7 @@ void run_ecmult_multi_tests(void) {
                 pt[2 * i + 1] = ptg;
             }
 
-            secp256k1_ecmult_multi(&ctx->ecmult_ctx, scratch, &ctx->error_callback, &r, &szero, ecmult_multi_callback, &data, sizes[j]);
+            CHECK(ecmult_multi(&ctx->ecmult_ctx, scratch, &ctx->error_callback, &r, &szero, ecmult_multi_callback, &data, sizes[j]));
             CHECK(secp256k1_gej_is_infinity(&r));
 
             random_scalar_order(&sc[0]);
@@ -2699,7 +2727,7 @@ void run_ecmult_multi_tests(void) {
                 secp256k1_ge_neg(&pt[2*i+1], &pt[2*i]);
             }
 
-            secp256k1_ecmult_multi(&ctx->ecmult_ctx, scratch, &ctx->error_callback, &r, &szero, ecmult_multi_callback, &data, sizes[j]);
+            CHECK(ecmult_multi(&ctx->ecmult_ctx, scratch, &ctx->error_callback, &r, &szero, ecmult_multi_callback, &data, sizes[j]));
             CHECK(secp256k1_gej_is_infinity(&r));
         }
 
@@ -2714,7 +2742,7 @@ void run_ecmult_multi_tests(void) {
             secp256k1_scalar_negate(&sc[i], &sc[i]);
         }
 
-        secp256k1_ecmult_multi(&ctx->ecmult_ctx, scratch, &ctx->error_callback, &r, &szero, ecmult_multi_callback, &data, 32);
+        CHECK(ecmult_multi(&ctx->ecmult_ctx, scratch, &ctx->error_callback, &r, &szero, ecmult_multi_callback, &data, 32));
         CHECK(secp256k1_gej_is_infinity(&r));
     }
 
@@ -2733,7 +2761,7 @@ void run_ecmult_multi_tests(void) {
         }
 
         secp256k1_ecmult(&ctx->ecmult_ctx, &r2, &r, &sc[0], &szero);
-        secp256k1_ecmult_multi(&ctx->ecmult_ctx, scratch, &ctx->error_callback, &r, &szero, ecmult_multi_callback, &data, 20);
+        CHECK(ecmult_multi(&ctx->ecmult_ctx, scratch, &ctx->error_callback, &r, &szero, ecmult_multi_callback, &data, 20));
         secp256k1_gej_neg(&r2, &r2);
         secp256k1_gej_add_var(&r, &r, &r2, NULL);
         CHECK(secp256k1_gej_is_infinity(&r));
@@ -2756,7 +2784,7 @@ void run_ecmult_multi_tests(void) {
 
         secp256k1_gej_set_ge(&p0j, &pt[0]);
         secp256k1_ecmult(&ctx->ecmult_ctx, &r2, &p0j, &rs, &szero);
-        secp256k1_ecmult_multi(&ctx->ecmult_ctx, scratch, &ctx->error_callback, &r, &szero, ecmult_multi_callback, &data, 20);
+        CHECK(ecmult_multi(&ctx->ecmult_ctx, scratch, &ctx->error_callback, &r, &szero, ecmult_multi_callback, &data, 20));
         secp256k1_gej_neg(&r2, &r2);
         secp256k1_gej_add_var(&r, &r, &r2, NULL);
         CHECK(secp256k1_gej_is_infinity(&r));
@@ -2764,13 +2792,13 @@ void run_ecmult_multi_tests(void) {
 
     /* Sanity check that zero scalars don't cause problems */
     memset(&sc[0], 0, sizeof(sc[0]));
-    secp256k1_ecmult_multi(&ctx->ecmult_ctx, scratch, &ctx->error_callback, &r, &szero, ecmult_multi_callback, &data, 20);
+    CHECK(ecmult_multi(&ctx->ecmult_ctx, scratch, &ctx->error_callback, &r, &szero, ecmult_multi_callback, &data, 20));
     memset(&sc[1], 0, sizeof(sc[0]));
     memset(&sc[2], 0, sizeof(sc[0]));
     memset(&sc[3], 0, sizeof(sc[0]));
     memset(&sc[4], 0, sizeof(sc[0]));
-    secp256k1_ecmult_multi(&ctx->ecmult_ctx, scratch, &ctx->error_callback, &r, &szero, ecmult_multi_callback, &data, 6);
-    secp256k1_ecmult_multi(&ctx->ecmult_ctx, scratch, &ctx->error_callback, &r, &szero, ecmult_multi_callback, &data, 5);
+    CHECK(ecmult_multi(&ctx->ecmult_ctx, scratch, &ctx->error_callback, &r, &szero, ecmult_multi_callback, &data, 6));
+    CHECK(ecmult_multi(&ctx->ecmult_ctx, scratch, &ctx->error_callback, &r, &szero, ecmult_multi_callback, &data, 5));
     CHECK(secp256k1_gej_is_infinity(&r));
 
     /* Run through s0*(t0*P) + s1*(t1*P) exhaustively for many small values of s0, s1, t0, t1 */
@@ -2815,7 +2843,7 @@ void run_ecmult_multi_tests(void) {
                         secp256k1_scalar_add(&tmp1, &tmp1, &tmp2);
 
                         secp256k1_ecmult(&ctx->ecmult_ctx, &expected, &ptgj, &tmp1, &szero);
-                        secp256k1_ecmult_multi(&ctx->ecmult_ctx, scratch, &ctx->error_callback, &actual, &szero, ecmult_multi_callback, &data, 2);
+                        CHECK(ecmult_multi(&ctx->ecmult_ctx, scratch, &ctx->error_callback, &actual, &szero, ecmult_multi_callback, &data, 2));
                         secp256k1_gej_neg(&expected, &expected);
                         secp256k1_gej_add_var(&actual, &actual, &expected, NULL);
                         CHECK(secp256k1_gej_is_infinity(&actual));
@@ -2824,8 +2852,134 @@ void run_ecmult_multi_tests(void) {
             }
         }
     }
+}
 
+void test_secp256k1_pippenger_bucket_window_inv(void) {
+    int i;
+
+    CHECK(secp256k1_pippenger_bucket_window_inv(0) == 0);
+    for(i = 1; i <= PIPPENGER_MAX_BUCKET_WINDOW; i++) {
+#ifdef USE_ENDOMORPHISM
+        /* Bucket_window of 8 is not used with endo */
+        if (i == 8) {
+            continue;
+        }
+#endif
+        CHECK(secp256k1_pippenger_bucket_window(secp256k1_pippenger_bucket_window_inv(i)) == i);
+        if (i != PIPPENGER_MAX_BUCKET_WINDOW) {
+            CHECK(secp256k1_pippenger_bucket_window(secp256k1_pippenger_bucket_window_inv(i)+1) > i);
+        }
+    }
+}
+
+/**
+ * Probabilistically test the function returning the maximum number of possible points
+ * for a given scratch space.
+ */
+void test_ecmult_multi_pippenger_max_points(void) {
+    size_t scratch_size = secp256k1_rand_int(256);
+    size_t max_size = secp256k1_pippenger_scratch_size(secp256k1_pippenger_bucket_window_inv(PIPPENGER_MAX_BUCKET_WINDOW-1)+512, 12);
+    secp256k1_scratch *scratch;
+    size_t n_points_supported;
+    int bucket_window = 0;
+
+    for(; scratch_size < max_size; scratch_size+=256) {
+        scratch = secp256k1_scratch_create(&ctx->error_callback, 0, scratch_size);
+        CHECK(scratch != NULL);
+        n_points_supported = secp256k1_pippenger_max_points(scratch);
+        if (n_points_supported == 0) {
+            secp256k1_scratch_destroy(scratch);
+            continue;
+        }
+        bucket_window = secp256k1_pippenger_bucket_window(n_points_supported);
+        CHECK(secp256k1_scratch_resize(scratch, &ctx->error_callback, secp256k1_pippenger_scratch_size(n_points_supported, bucket_window), PIPPENGER_SCRATCH_OBJECTS));
+        secp256k1_scratch_destroy(scratch);
+    }
+    CHECK(bucket_window == PIPPENGER_MAX_BUCKET_WINDOW);
+}
+
+/**
+ * Run secp256k1_ecmult_multi_var with num points and a scratch space restricted to
+ * 1 <= i <= num points.
+ */
+void test_ecmult_multi_batching(void) {
+    static const int n_points = 2*ECMULT_PIPPENGER_THRESHOLD;
+    secp256k1_scalar scG;
+    secp256k1_scalar szero;
+    secp256k1_scalar *sc = (secp256k1_scalar *)checked_malloc(&ctx->error_callback, sizeof(secp256k1_scalar) * n_points);
+    secp256k1_ge *pt = (secp256k1_ge *)checked_malloc(&ctx->error_callback, sizeof(secp256k1_ge) * n_points);
+    secp256k1_gej r;
+    secp256k1_gej r2;
+    ecmult_multi_data data;
+    int i;
+    secp256k1_scratch *scratch;
+
+    secp256k1_gej_set_infinity(&r2);
+    secp256k1_scalar_set_int(&szero, 0);
+
+    /* Get random scalars and group elements and compute result */
+    random_scalar_order(&scG);
+    secp256k1_ecmult(&ctx->ecmult_ctx, &r2, &r2, &szero, &scG);
+    for(i = 0; i < n_points; i++) {
+        secp256k1_ge ptg;
+        secp256k1_gej ptgj;
+        random_group_element_test(&ptg);
+        secp256k1_gej_set_ge(&ptgj, &ptg);
+        pt[i] = ptg;
+        random_scalar_order(&sc[i]);
+        secp256k1_ecmult(&ctx->ecmult_ctx, &ptgj, &ptgj, &sc[i], NULL);
+        secp256k1_gej_add_var(&r2, &r2, &ptgj, NULL);
+    }
+    data.sc = sc;
+    data.pt = pt;
+
+    /* Test with empty scratch space */
+    scratch = secp256k1_scratch_create(&ctx->error_callback, 0, 0);
+    CHECK(!secp256k1_ecmult_multi_var(&ctx->ecmult_ctx, scratch, &ctx->error_callback, &r, &scG, ecmult_multi_callback, &data, 1));
     secp256k1_scratch_destroy(scratch);
+
+    /* Test with space for 1 point in pippenger. That's not enough because
+     * ecmult_multi selects strauss which requires more memory. */
+    scratch = secp256k1_scratch_create(&ctx->error_callback, 0, secp256k1_pippenger_scratch_size(1, 1) + PIPPENGER_SCRATCH_OBJECTS*ALIGNMENT);
+    CHECK(!secp256k1_ecmult_multi_var(&ctx->ecmult_ctx, scratch, &ctx->error_callback, &r, &scG, ecmult_multi_callback, &data, 1));
+    secp256k1_scratch_destroy(scratch);
+
+    secp256k1_gej_neg(&r2, &r2);
+    for(i = 1; i <= n_points; i++) {
+        if (i > ECMULT_PIPPENGER_THRESHOLD) {
+            int bucket_window = secp256k1_pippenger_bucket_window(i);
+            size_t scratch_size = secp256k1_pippenger_scratch_size(i, bucket_window);
+            scratch = secp256k1_scratch_create(&ctx->error_callback, 0, scratch_size + PIPPENGER_SCRATCH_OBJECTS*ALIGNMENT);
+        } else {
+            size_t scratch_size = secp256k1_strauss_scratch_size(i);
+            scratch = secp256k1_scratch_create(&ctx->error_callback, 0, scratch_size + STRAUSS_SCRATCH_OBJECTS*ALIGNMENT);
+        }
+        CHECK(secp256k1_ecmult_multi_var(&ctx->ecmult_ctx, scratch, &ctx->error_callback, &r, &scG, ecmult_multi_callback, &data, n_points));
+        secp256k1_gej_add_var(&r, &r, &r2, NULL);
+        CHECK(secp256k1_gej_is_infinity(&r));
+        secp256k1_scratch_destroy(scratch);
+    }
+    free(sc);
+    free(pt);
+}
+
+void run_ecmult_multi_tests(void) {
+    secp256k1_scratch *scratch;
+
+    test_secp256k1_pippenger_bucket_window_inv();
+    test_ecmult_multi_pippenger_max_points();
+    scratch = secp256k1_scratch_create(&ctx->error_callback, 0, 819200);
+    test_ecmult_multi(scratch, secp256k1_ecmult_multi_var);
+    test_ecmult_multi(scratch, secp256k1_ecmult_pippenger_batch_single);
+    test_ecmult_multi(scratch, secp256k1_ecmult_strauss_batch_single);
+    secp256k1_scratch_destroy(scratch);
+
+    /* Run test_ecmult_multi with space for exactly one point */
+    scratch = secp256k1_scratch_create(&ctx->error_callback, 0, secp256k1_strauss_scratch_size(1) + STRAUSS_SCRATCH_OBJECTS*ALIGNMENT);
+    test_ecmult_multi(scratch, secp256k1_ecmult_multi_var);
+    secp256k1_scratch_destroy(scratch);
+
+    test_ecmult_multi_batching();
 }
 
 void test_wnaf(const secp256k1_scalar *number, int w) {
@@ -2918,64 +3072,59 @@ void test_constant_wnaf(const secp256k1_scalar *number, int w) {
     CHECK(secp256k1_scalar_eq(&x, &num));
 }
 
-void run_heap(void){
-    secp256k1_scalar_heap heap;
-    secp256k1_scalar sc[20];
-    secp256k1_gej pt[20];
-    uint32_t tree[20];
-    size_t i;
+void test_fixed_wnaf(const secp256k1_scalar *number, int w) {
+    secp256k1_scalar x, shift;
+    int wnaf[256] = {0};
+    int i;
+    int skew;
+    secp256k1_scalar num = *number;
 
-    unsigned char idx1, idx2;
-
-    secp256k1_ge ptg;
-
-    /* Single-element stack */
-    random_scalar_order(&sc[0]);
-    random_group_element_test(&ptg);
-    secp256k1_gej_set_ge(&pt[0], &ptg);
-
-    secp256k1_heap_initialize(&heap, tree, sc, pt, 1);
-    CHECK(heap.size == 1);
-    secp256k1_heap_remove(&heap);
-    CHECK(heap.size == 0);
-
-    /* Multi-item stack */
-    for (i = 0; i < 20; i++) {
-        random_scalar_order(&sc[i]);
-        random_group_element_test(&ptg);
-        secp256k1_gej_set_ge(&pt[i], &ptg);
+    secp256k1_scalar_set_int(&x, 0);
+    secp256k1_scalar_set_int(&shift, 1 << w);
+    /* With USE_ENDOMORPHISM on we only consider 128-bit numbers */
+#ifdef USE_ENDOMORPHISM
+    for (i = 0; i < 16; ++i) {
+        secp256k1_scalar_shr_int(&num, 8);
     }
-    secp256k1_heap_initialize(&heap, tree, sc, pt, i);
+#endif
+    skew = secp256k1_wnaf_fixed(wnaf, &num, w);
 
-    idx1 = secp256k1_heap_remove(&heap);
-    CHECK(heap.size == 19);
-    for (i = 0; i < 19; i++) {
-        idx2 = secp256k1_heap_remove(&heap);
-        CHECK(heap.size == 18 - i);
-        CHECK(secp256k1_scalar_cmp_var(&sc[idx2], &sc[idx1]) <= 0);
-        idx1 = idx2;
-    }
+    for (i = WNAF_SIZE(w)-1; i >= 0; --i) {
+        secp256k1_scalar t;
+        int v = wnaf[i];
+        CHECK(v != 0); /* check nonzero */
+        CHECK(v & 1);  /* check parity */
+        CHECK(v > -(1 << w)); /* check range above */
+        CHECK(v < (1 << w));  /* check range below */
 
-    /* Try with a lot of duplicates to make sure nothing gets confused */
-    for (i = 0; i < 7; i++) {
-        random_scalar_order(&sc[i]);
-        random_group_element_test(&ptg);
-        secp256k1_gej_set_ge(&pt[i], &ptg);
+        secp256k1_scalar_mul(&x, &x, &shift);
+        if (v >= 0) {
+            secp256k1_scalar_set_int(&t, v);
+        } else {
+            secp256k1_scalar_set_int(&t, -v);
+            secp256k1_scalar_negate(&t, &t);
+        }
+        secp256k1_scalar_add(&x, &x, &t);
     }
-    for (; i < 20; i++) {
-        sc[i] = sc[i % 7];
-        pt[i] = pt[i % 7];
-    }
-    secp256k1_heap_initialize(&heap, tree, sc, pt, i);
+    /* If skew is 1 then add 1 to num */
+    secp256k1_scalar_cadd_bit(&num, 0, skew == 1);
+    CHECK(secp256k1_scalar_eq(&x, &num));
+}
 
-    idx1 = secp256k1_heap_remove(&heap);
-    CHECK(heap.size == 19);
-    for (i = 0; i < 19; i++) {
-        idx2 = secp256k1_heap_remove(&heap);
-        CHECK(heap.size == 18 - i);
-        CHECK(secp256k1_scalar_cmp_var(&sc[idx2], &sc[idx1]) <= 0);
-        idx1 = idx2;
+void test_fixed_wnaf_zero(int w) {
+    int wnaf[256] = {0};
+    int i;
+    int skew;
+    secp256k1_scalar num;
+
+    secp256k1_scalar_set_int(&num, 0);
+    skew = secp256k1_wnaf_fixed(wnaf, &num, w);
+
+    for (i = WNAF_SIZE(w)-1; i >= 0; --i) {
+        int v = wnaf[i];
+        CHECK(v == 0);
     }
+    CHECK(skew == 0);
 }
 
 void run_wnaf(void) {
@@ -2988,12 +3137,15 @@ void run_wnaf(void) {
     test_constant_wnaf(&n, 4);
     n.d[0] = 2;
     test_constant_wnaf(&n, 4);
+    /* Test 0 */
+    test_fixed_wnaf_zero(4);
     /* Random tests */
     for (i = 0; i < count; i++) {
         random_scalar_order(&n);
         test_wnaf(&n, 4+(i%10));
         test_constant_wnaf_negate(&n);
         test_constant_wnaf(&n, 4 + (i % 10));
+        test_fixed_wnaf(&n, 4 + (i % 10));
     }
     secp256k1_scalar_set_int(&n, 0);
     CHECK(secp256k1_scalar_cond_negate(&n, 1) == -1);
