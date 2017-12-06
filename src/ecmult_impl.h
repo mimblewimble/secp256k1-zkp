@@ -1,5 +1,6 @@
 /**********************************************************************
- * Copyright (c) 2013, 2014 Pieter Wuille                             *
+ * Copyright (c) 2013, 2014, 2017 Pieter Wuille, Andrew Poelstra,     *
+ *   Peter Dettmann                                                   *
  * Distributed under the MIT software license, see the accompanying   *
  * file COPYING or http://www.opensource.org/licenses/mit-license.php.*
  **********************************************************************/
@@ -283,50 +284,80 @@ static int secp256k1_ecmult_wnaf(int *wnaf, int len, const secp256k1_scalar *a, 
     return last_set_bit + 1;
 }
 
-static void secp256k1_ecmult(const secp256k1_ecmult_context *ctx, secp256k1_gej *r, const secp256k1_gej *a, const secp256k1_scalar *na, const secp256k1_scalar *ng) {
-    secp256k1_ge pre_a[ECMULT_TABLE_SIZE(WINDOW_A)];
-    secp256k1_ge tmpa;
-    secp256k1_fe Z;
+struct secp256k1_ecmult_point_state {
 #ifdef USE_ENDOMORPHISM
-    secp256k1_ge pre_a_lam[ECMULT_TABLE_SIZE(WINDOW_A)];
     secp256k1_scalar na_1, na_lam;
-    /* Splitted G factors. */
-    secp256k1_scalar ng_1, ng_128;
     int wnaf_na_1[130];
     int wnaf_na_lam[130];
     int bits_na_1;
     int bits_na_lam;
-    int wnaf_ng_1[129];
-    int bits_ng_1;
-    int wnaf_ng_128[129];
-    int bits_ng_128;
 #else
     int wnaf_na[256];
     int bits_na;
-    int wnaf_ng[256];
-    int bits_ng;
 #endif
-    int i;
-    int bits;
+    size_t input_pos;
+};
 
 #ifdef USE_ENDOMORPHISM
-    /* split na into na_1 and na_lam (where na = na_1 + na_lam*lambda, and na_1 and na_lam are ~128 bit) */
-    secp256k1_scalar_split_lambda(&na_1, &na_lam, na);
-
-    /* build wnaf representation for na_1 and na_lam. */
-    bits_na_1   = secp256k1_ecmult_wnaf(wnaf_na_1,   130, &na_1,   WINDOW_A);
-    bits_na_lam = secp256k1_ecmult_wnaf(wnaf_na_lam, 130, &na_lam, WINDOW_A);
-    VERIFY_CHECK(bits_na_1 <= 130);
-    VERIFY_CHECK(bits_na_lam <= 130);
-    bits = bits_na_1;
-    if (bits_na_lam > bits) {
-        bits = bits_na_lam;
-    }
+#define STRAUSS_WNAF_MAX_POINTS 24
 #else
-    /* build wnaf representation for na. */
-    bits_na     = secp256k1_ecmult_wnaf(wnaf_na,     256, na,      WINDOW_A);
-    bits = bits_na;
+#define STRAUSS_WNAF_MAX_POINTS 32
 #endif
+
+static void secp256k1_ecmult_strauss_wnaf(const secp256k1_ecmult_context *ctx, secp256k1_gej *r, int num, const secp256k1_gej *a, const secp256k1_scalar *na, const secp256k1_scalar *ng) {
+    secp256k1_ge pre_a[STRAUSS_WNAF_MAX_POINTS][ECMULT_TABLE_SIZE(WINDOW_A)];
+#ifdef USE_ENDOMORPHISM
+    secp256k1_ge pre_a_lam[STRAUSS_WNAF_MAX_POINTS][ECMULT_TABLE_SIZE(WINDOW_A)];
+#endif
+    struct secp256k1_ecmult_point_state state[STRAUSS_WNAF_MAX_POINTS];
+
+    secp256k1_ge tmpa;
+    secp256k1_fe Z;
+#ifdef USE_ENDOMORPHISM
+    /* Splitted G factors. */
+    secp256k1_scalar ng_1, ng_128;
+    int wnaf_ng_1[129];
+    int bits_ng_1 = 0;
+    int wnaf_ng_128[129];
+    int bits_ng_128 = 0;
+#else
+    int wnaf_ng[256];
+    int bits_ng = 0;
+#endif
+    int i;
+    int bits = 0;
+    int np;
+    int no = 0;
+
+    for (np = 0; np < num; ++np) {
+        if (secp256k1_scalar_is_zero(&na[np]) || secp256k1_gej_is_infinity(&a[np])) {
+            continue;
+        }
+        state[no].input_pos = np;
+#ifdef USE_ENDOMORPHISM
+        /* split na into na_1 and na_lam (where na = na_1 + na_lam*lambda, and na_1 and na_lam are ~128 bit) */
+        secp256k1_scalar_split_lambda(&state[no].na_1, &state[no].na_lam, &na[np]);
+
+        /* build wnaf representation for na_1 and na_lam. */
+        state[no].bits_na_1   = secp256k1_ecmult_wnaf(state[no].wnaf_na_1,   130, &state[no].na_1,   WINDOW_A);
+        state[no].bits_na_lam = secp256k1_ecmult_wnaf(state[no].wnaf_na_lam, 130, &state[no].na_lam, WINDOW_A);
+        VERIFY_CHECK(state[no].bits_na_1 <= 130);
+        VERIFY_CHECK(state[no].bits_na_lam <= 130);
+        if (state[no].bits_na_1 > bits) {
+            bits = state[no].bits_na_1;
+        }
+        if (state[no].bits_na_lam > bits) {
+            bits = state[no].bits_na_lam;
+        }
+#else
+        /* build wnaf representation for na. */
+        state[no].bits_na     = secp256k1_ecmult_wnaf(state[no].wnaf_na,     256, &na[np],      WINDOW_A);
+        if (state[no].bits_na > bits) {
+            bits = state[no].bits_na;
+        }
+#endif
+        ++no;
+    }
 
     /* Calculate odd multiples of a.
      * All multiples are brought to the same Z 'denominator', which is stored
@@ -338,29 +369,54 @@ static void secp256k1_ecmult(const secp256k1_ecmult_context *ctx, secp256k1_gej 
      * of 1/Z, so we can use secp256k1_gej_add_zinv_var, which uses the same
      * isomorphism to efficiently add with a known Z inverse.
      */
-    secp256k1_ecmult_odd_multiples_table_globalz_windowa(pre_a, &Z, a);
+    if (no > 0) {
+        secp256k1_gej prej[STRAUSS_WNAF_MAX_POINTS][ECMULT_TABLE_SIZE(WINDOW_A)];
+        secp256k1_fe zr[STRAUSS_WNAF_MAX_POINTS][ECMULT_TABLE_SIZE(WINDOW_A)];
+
+        /* Compute the odd multiples in Jacobian form. */
+        secp256k1_ecmult_odd_multiples_table(ECMULT_TABLE_SIZE(WINDOW_A), prej[0], zr[0], &a[state[0].input_pos]);
+        for (np = 1; np < no; ++np) {
+            secp256k1_gej tmp = a[state[np].input_pos];
+#ifdef VERIFY
+            secp256k1_fe_normalize_var(&(prej[np - 1][ECMULT_TABLE_SIZE(WINDOW_A) - 1].z));
+#endif
+            secp256k1_gej_rescale(&tmp, &(prej[np - 1][ECMULT_TABLE_SIZE(WINDOW_A) - 1].z));
+            secp256k1_ecmult_odd_multiples_table(ECMULT_TABLE_SIZE(WINDOW_A), prej[np], zr[np], &tmp);
+            secp256k1_fe_mul(&zr[np][0], &zr[np][0], &(a[state[np].input_pos].z));
+        }
+        /* Bring them to the same Z denominator. */
+        secp256k1_ge_globalz_set_table_gej(ECMULT_TABLE_SIZE(WINDOW_A) * no, &pre_a[0][0], &Z, prej[0], zr[0]);
+    } else {
+        secp256k1_fe_set_int(&Z, 1);
+    }
 
 #ifdef USE_ENDOMORPHISM
-    for (i = 0; i < ECMULT_TABLE_SIZE(WINDOW_A); i++) {
-        secp256k1_ge_mul_lambda(&pre_a_lam[i], &pre_a[i]);
+    for (np = 0; np < no; ++np) {
+        for (i = 0; i < ECMULT_TABLE_SIZE(WINDOW_A); i++) {
+            secp256k1_ge_mul_lambda(&pre_a_lam[np][i], &pre_a[np][i]);
+        }
     }
 
-    /* split ng into ng_1 and ng_128 (where gn = gn_1 + gn_128*2^128, and gn_1 and gn_128 are ~128 bit) */
-    secp256k1_scalar_split_128(&ng_1, &ng_128, ng);
+    if (ng) {
+        /* split ng into ng_1 and ng_128 (where gn = gn_1 + gn_128*2^128, and gn_1 and gn_128 are ~128 bit) */
+        secp256k1_scalar_split_128(&ng_1, &ng_128, ng);
 
-    /* Build wnaf representation for ng_1 and ng_128 */
-    bits_ng_1   = secp256k1_ecmult_wnaf(wnaf_ng_1,   129, &ng_1,   WINDOW_G);
-    bits_ng_128 = secp256k1_ecmult_wnaf(wnaf_ng_128, 129, &ng_128, WINDOW_G);
-    if (bits_ng_1 > bits) {
-        bits = bits_ng_1;
-    }
-    if (bits_ng_128 > bits) {
-        bits = bits_ng_128;
+        /* Build wnaf representation for ng_1 and ng_128 */
+        bits_ng_1   = secp256k1_ecmult_wnaf(wnaf_ng_1,   129, &ng_1,   WINDOW_G);
+        bits_ng_128 = secp256k1_ecmult_wnaf(wnaf_ng_128, 129, &ng_128, WINDOW_G);
+        if (bits_ng_1 > bits) {
+            bits = bits_ng_1;
+        }
+        if (bits_ng_128 > bits) {
+            bits = bits_ng_128;
+        }
     }
 #else
-    bits_ng     = secp256k1_ecmult_wnaf(wnaf_ng,     256, ng,      WINDOW_G);
-    if (bits_ng > bits) {
-        bits = bits_ng;
+    if (ng) {
+        bits_ng     = secp256k1_ecmult_wnaf(wnaf_ng,     256, ng,      WINDOW_G);
+        if (bits_ng > bits) {
+            bits = bits_ng;
+        }
     }
 #endif
 
@@ -370,13 +426,15 @@ static void secp256k1_ecmult(const secp256k1_ecmult_context *ctx, secp256k1_gej 
         int n;
         secp256k1_gej_double_var(r, r, NULL);
 #ifdef USE_ENDOMORPHISM
-        if (i < bits_na_1 && (n = wnaf_na_1[i])) {
-            ECMULT_TABLE_GET_GE(&tmpa, pre_a, n, WINDOW_A);
-            secp256k1_gej_add_ge_var(r, r, &tmpa, NULL);
-        }
-        if (i < bits_na_lam && (n = wnaf_na_lam[i])) {
-            ECMULT_TABLE_GET_GE(&tmpa, pre_a_lam, n, WINDOW_A);
-            secp256k1_gej_add_ge_var(r, r, &tmpa, NULL);
+        for (np = 0; np < no; ++np) {
+            if (i < state[np].bits_na_1 && (n = state[np].wnaf_na_1[i])) {
+                ECMULT_TABLE_GET_GE(&tmpa, pre_a[np], n, WINDOW_A);
+                secp256k1_gej_add_ge_var(r, r, &tmpa, NULL);
+            }
+            if (i < state[np].bits_na_lam && (n = state[np].wnaf_na_lam[i])) {
+                ECMULT_TABLE_GET_GE(&tmpa, pre_a_lam[np], n, WINDOW_A);
+                secp256k1_gej_add_ge_var(r, r, &tmpa, NULL);
+            }
         }
         if (i < bits_ng_1 && (n = wnaf_ng_1[i])) {
             ECMULT_TABLE_GET_GE_STORAGE(&tmpa, *ctx->pre_g, n, WINDOW_G);
@@ -387,9 +445,11 @@ static void secp256k1_ecmult(const secp256k1_ecmult_context *ctx, secp256k1_gej 
             secp256k1_gej_add_zinv_var(r, r, &tmpa, &Z);
         }
 #else
-        if (i < bits_na && (n = wnaf_na[i])) {
-            ECMULT_TABLE_GET_GE(&tmpa, pre_a, n, WINDOW_A);
-            secp256k1_gej_add_ge_var(r, r, &tmpa, NULL);
+        for (np = 0; np < no; ++np) {
+            if (i < state[np].bits_na && (n = state[np].wnaf_na[i])) {
+                ECMULT_TABLE_GET_GE(&tmpa, pre_a[np], n, WINDOW_A);
+                secp256k1_gej_add_ge_var(r, r, &tmpa, NULL);
+            }
         }
         if (i < bits_ng && (n = wnaf_ng[i])) {
             ECMULT_TABLE_GET_GE_STORAGE(&tmpa, *ctx->pre_g, n, WINDOW_G);
@@ -400,6 +460,328 @@ static void secp256k1_ecmult(const secp256k1_ecmult_context *ctx, secp256k1_gej 
 
     if (!r->infinity) {
         secp256k1_fe_mul(&r->z, &r->z, &Z);
+    }
+}
+
+/* begin ecmult_multi */
+
+typedef struct {
+    uint32_t *tree;
+    const secp256k1_scalar *scalars;
+    size_t size;
+} secp256k1_scalar_heap;
+
+static void secp256k1_sift_down(secp256k1_scalar_heap *heap, size_t node, uint32_t index) {
+    uint32_t child_index, other_index;
+    size_t child, other, half_size = heap->size >> 1;
+    const secp256k1_scalar *sc = heap->scalars;
+
+    while (node < half_size) {
+        /* Initially assume the left child is the larger child */
+        child = (node << 1) + 1;
+        child_index = heap->tree[child];
+
+        /* If there is a right child, check whether it's larger than the left */
+        other = child + 1;
+        if (other < heap->size) {
+            other_index = heap->tree[other];
+            if (secp256k1_scalar_cmp_var(&sc[other_index], &sc[child_index]) > 0) {
+                child = other;
+                child_index = other_index;
+            }
+        }
+
+        /* If the current node is larger than its largest child, stop at this level */
+        if (secp256k1_scalar_cmp_var(&sc[index], &sc[child_index]) > 0) {
+            break;
+        }
+
+        /* Move the larger child up, and recurse from its previous position */
+        heap->tree[node] = child_index;
+        node = child;
+    }
+
+    heap->tree[node] = index;
+}
+
+static void secp256k1_sift_up(secp256k1_scalar_heap *heap, size_t node, uint32_t index) {
+    size_t parent;
+    uint32_t parent_index;
+    const secp256k1_scalar *sc = heap->scalars;
+
+    while (node > 0) {
+        parent = (node - 1) >> 1;
+        parent_index = heap->tree[parent];
+
+        /* If the current node is not larger than its parent, stop at this level */
+        if (secp256k1_scalar_cmp_var(&sc[index], &sc[parent_index]) <= 0) {
+            break;
+        }
+
+        /* Move the parent down, and recurse from its previous position */
+        heap->tree[node] = parent_index;
+        node = parent;
+    }
+
+    heap->tree[node] = index;
+}
+
+static void secp256k1_sift_floyd(secp256k1_scalar_heap *heap, size_t node, uint32_t index) {
+    uint32_t child_index, other_index;
+    size_t child, other, half_size = heap->size >> 1;
+    const secp256k1_scalar *sc = heap->scalars;
+
+    while (node < half_size) {
+        /* Initially assume the left child is the larger child */
+        child = (node << 1) + 1;
+        child_index = heap->tree[child];
+
+        /* If there is a right child, check whether it's larger than the left */
+        other = child + 1;
+        if (other < heap->size) {
+            other_index = heap->tree[other];
+            if (secp256k1_scalar_cmp_var(&sc[other_index], &sc[child_index]) > 0) {
+                child = other;
+                child_index = other_index;
+            }
+        }
+
+        /* Move the larger child up, and recurse from its previous position */
+        heap->tree[node] = child_index;
+        node = child;
+    }
+
+    secp256k1_sift_up(heap, node, index);
+}
+
+SECP256K1_INLINE static void secp256k1_heapify(secp256k1_scalar_heap *heap) {
+    size_t root = heap->size >> 1;;
+    while (root-- > 0) {
+        secp256k1_sift_down(heap, root, heap->tree[root]);
+    }
+}
+
+static void secp256k1_heap_initialize(secp256k1_scalar_heap *heap, uint32_t *tree, const secp256k1_scalar *scalars, const secp256k1_gej *pt, size_t n) {
+    size_t i, size = 0;
+
+    heap->tree = tree;
+    for (i = 0; i < n; ++i) {
+        if (!secp256k1_scalar_is_zero(&scalars[i]) && !secp256k1_gej_is_infinity(&pt[i])) {
+            heap->tree[size++] = i;
+        }
+    }
+
+    heap->scalars = scalars;
+    heap->size = size;
+
+    secp256k1_heapify(heap);
+}
+
+SECP256K1_INLINE static uint32_t secp256k1_replace(secp256k1_scalar_heap *heap, uint32_t index) {
+    uint32_t result = heap->tree[0];
+    VERIFY_CHECK(heap->size > 0);
+    secp256k1_sift_floyd(heap, 0, index);
+    return result;
+}
+
+SECP256K1_INLINE static uint32_t secp256k1_heap_remove(secp256k1_scalar_heap *heap) {
+    uint32_t result = heap->tree[0];
+    VERIFY_CHECK(heap->size > 0);
+    if (--heap->size > 0) {
+        secp256k1_sift_down(heap, 0, heap->tree[heap->size]);
+    }
+    return result;
+}
+
+/** Multi-multiply: R = sum_i ni * Ai */
+static void secp256k1_ecmult_multi_bos_coster(uint32_t *tree_space, secp256k1_gej *r, secp256k1_scalar *sc, secp256k1_gej *pt, size_t n) {
+    secp256k1_scalar_heap heap;
+    uint32_t first, second;
+
+    secp256k1_gej_set_infinity(r);
+    secp256k1_heap_initialize(&heap, tree_space, sc, pt, n);
+
+    if (heap.size == 0) {
+        return;
+    }
+
+    first = secp256k1_heap_remove(&heap);
+
+    while (heap.size > 0) {
+        second = heap.tree[0];        
+
+        do {
+            /* Observe that nX + mY = (n-m)X + m(X + Y), and if n > m this transformation
+             * reduces the magnitude of the larger scalar, significantly because X and Y are
+             * chosen to be the two largest values, and therefore will be similar in magnitude.
+             * So by repeating this we will quickly zero out all but one exponent, which will
+             * be small. */
+            secp256k1_gej_add_var(&pt[second], &pt[first], &pt[second], NULL);  /* Y -> X + Y */
+            secp256k1_scalar_numsub(&sc[first], &sc[first], &sc[second]);  /* n -> n - m */
+
+            if (secp256k1_scalar_cmp_var(&sc[first], &sc[second]) < 0) {
+                break;
+            }
+
+            /* For pathological inputs, n and m may not be similar in magnitude (e.g. if
+             * n ~ 2^256 and m ~ 1. In this case the above step will not reduce the magnitude
+             * of the larger scalar, which we detect with the above condition. In this case
+             * we simply halve the scalar and double its point, ensuring we make progress. */
+            if (secp256k1_scalar_shr_int(&sc[first], 1) == 1) {
+                secp256k1_gej_add_var(r, r, &pt[first], NULL);
+            }
+            secp256k1_gej_double_var(&pt[first], &pt[first], NULL);
+        }
+        while (secp256k1_scalar_cmp_var(&sc[first], &sc[second]) >= 0);
+
+        if (secp256k1_scalar_is_zero(&sc[first])) {
+            first = secp256k1_heap_remove(&heap);
+        } else {
+            first = secp256k1_replace(&heap, first);
+        }
+    }
+
+    VERIFY_CHECK(!secp256k1_scalar_is_zero(&sc[first]));
+
+    /* Now the desired result is heap_sc[0] * heap_pt[0], and for random scalars it is
+     * very likely that heap_sc[0] = 1, and extremely likely heap_sc[0] < 5. (After
+     * about 100k trials I saw around 200 2's and one 3.) So use a binary ladder rather
+     * than any heavy machinery to finish it off. */
+    for (;;) {
+        if (secp256k1_scalar_shr_int(&sc[first], 1) == 1) {
+            secp256k1_gej_add_var(r, r, &pt[first], NULL);
+            if (secp256k1_scalar_is_zero(&sc[first])) {
+                break;
+            }
+        }
+        secp256k1_gej_double_var(&pt[first], &pt[first], NULL);
+    }
+}
+
+#ifdef USE_ENDOMORPHISM
+SECP256K1_INLINE static void secp256k1_ecmult_endo_split(secp256k1_scalar *s1, secp256k1_scalar *s2, secp256k1_gej *p1, secp256k1_gej *p2) {
+    secp256k1_scalar tmp = *s1;
+    secp256k1_scalar_split_lambda(s1, s2, &tmp);
+    secp256k1_gej_mul_lambda(p2, p1);
+
+    if (secp256k1_scalar_is_high(s1)) {
+        secp256k1_scalar_negate(s1, s1);
+        secp256k1_gej_neg(p1, p1);
+    }
+    if (secp256k1_scalar_is_high(s2)) {
+        secp256k1_scalar_negate(s2, s2);
+        secp256k1_gej_neg(p2, p2);
+    }
+}
+#endif
+
+static int secp256k1_ecmult_multi_split_bos_coster(const secp256k1_ecmult_context *ctx, secp256k1_scratch *scratch, const secp256k1_callback* error_callback, secp256k1_gej *r, const secp256k1_scalar *inp_g_sc, secp256k1_ecmult_multi_callback cb, void *cbdata, size_t n) {
+    const size_t entry_size = sizeof(secp256k1_gej) + sizeof(secp256k1_scalar) + sizeof(size_t);
+    const size_t max_entries = secp256k1_scratch_max_allocation(scratch) / entry_size;
+    /* Use 2(n+1) with the endomorphism, n+1 without, when calculating batch sizes.
+     * The reason for +1 is that Bos-Coster requires we add the G scalar to the list of
+     * other scalars. */
+#ifdef USE_ENDOMORPHISM
+    const size_t n_batches = (2*n + max_entries + 1) / max_entries;
+    size_t entries_per_batch = (2*n + n_batches + 1) / n_batches;
+#else
+    const size_t n_batches = (n + max_entries) / max_entries;
+    size_t entries_per_batch = (n + n_batches) / n_batches;
+#endif
+
+    secp256k1_gej tmp;
+    secp256k1_gej *pt;
+    secp256k1_scalar *sc;
+    uint32_t *tree_space;
+    size_t idx = 0;
+    size_t point_idx = 0;
+
+    /* Attempt to allocate sufficient space for Bos-Coster */
+    while (!secp256k1_scratch_resize(scratch, error_callback, entries_per_batch * entry_size)) {
+        entries_per_batch /= 2;
+        if (entries_per_batch < 2) {
+            return 0;
+        }
+    }
+    secp256k1_scratch_reset(scratch);
+    pt = (secp256k1_gej *) secp256k1_scratch_alloc(scratch, entries_per_batch * sizeof(*pt));
+    sc = (secp256k1_scalar *) secp256k1_scratch_alloc(scratch, entries_per_batch * sizeof(*sc));
+    tree_space = (uint32_t *) secp256k1_scratch_alloc(scratch, entries_per_batch * sizeof(*tree_space));
+    VERIFY_CHECK(pt != NULL);
+    VERIFY_CHECK(sc != NULL);
+    VERIFY_CHECK(ctx != NULL);
+    VERIFY_CHECK(tree_space != NULL);
+
+    sc[0] = *inp_g_sc;
+    secp256k1_gej_set_ge(&pt[0], &secp256k1_ge_const_g);
+    idx++;
+#ifdef USE_ENDOMORPHISM
+    secp256k1_ecmult_endo_split(&sc[0], &sc[1], &pt[0], &pt[1]);
+    idx++;
+#endif
+
+    secp256k1_gej_set_infinity(r);
+    while (point_idx < n) {
+        secp256k1_ge point;
+        if (!cb(&sc[idx], &point, point_idx, cbdata)) {
+            return 0;
+        }
+        secp256k1_gej_set_ge(&pt[idx], &point);
+        idx++;
+#ifdef USE_ENDOMORPHISM
+        secp256k1_ecmult_endo_split(&sc[idx - 1], &sc[idx], &pt[idx - 1], &pt[idx]);
+        idx++;
+        if (idx >= entries_per_batch - 1) {
+#else
+        if (idx >= entries_per_batch) {
+#endif
+            secp256k1_ecmult_multi_bos_coster(tree_space, &tmp, sc, pt, idx);
+            secp256k1_gej_add_var(r, r, &tmp, NULL);
+            idx = 0;
+        }
+        point_idx++;
+    }
+    secp256k1_ecmult_multi_bos_coster(tree_space, &tmp, sc, pt, idx);
+    secp256k1_gej_add_var(r, r, &tmp, NULL);
+    return 1;
+}
+
+static void secp256k1_ecmult(const secp256k1_ecmult_context *ctx, secp256k1_gej *r, const secp256k1_gej *a, const secp256k1_scalar *na, const secp256k1_scalar *ng) {
+    secp256k1_ecmult_strauss_wnaf(ctx, r, 1, a, na, ng);
+}
+
+static int secp256k1_ecmult_multi_split_strauss_wnaf(const secp256k1_ecmult_context *ctx, secp256k1_scratch *scratch, const secp256k1_callback* error_callback, secp256k1_gej *r, const secp256k1_scalar *inp_g_sc, secp256k1_ecmult_multi_callback cb, void *cbdata, size_t n) {
+    secp256k1_gej points[STRAUSS_WNAF_MAX_POINTS];
+    secp256k1_scalar scalars[STRAUSS_WNAF_MAX_POINTS];
+    secp256k1_gej acc;
+    size_t in_pos = 0, out_pos = 0;
+    int first = 1;
+    (void)scratch;
+    (void)error_callback;
+
+    while (in_pos < n) {
+        secp256k1_ge point;
+        if (!cb(&scalars[out_pos], &point, in_pos, cbdata)) return 0;
+        secp256k1_gej_set_ge(&points[out_pos], &point);
+        ++in_pos;
+        ++out_pos;
+        if (out_pos == STRAUSS_WNAF_MAX_POINTS || in_pos == n) {
+            secp256k1_ecmult_strauss_wnaf(ctx, first ? r : &acc, out_pos, points, scalars, first ? inp_g_sc : NULL);
+            if (!first) {
+                secp256k1_gej_add_var(r, r, &acc, NULL);
+            }
+            first = 0;
+            out_pos = 0;
+        }
+    }
+    return 1;
+}
+
+static int secp256k1_ecmult_multi(const secp256k1_ecmult_context *ctx, secp256k1_scratch *scratch, const secp256k1_callback* error_callback, secp256k1_gej *r, const secp256k1_scalar *inp_g_sc, secp256k1_ecmult_multi_callback cb, void *cbdata, size_t n) {
+    if (n > 200) {
+        return secp256k1_ecmult_multi_split_bos_coster(ctx, scratch, error_callback, r, inp_g_sc, cb, cbdata, n);
+    } else {
+        return secp256k1_ecmult_multi_split_strauss_wnaf(ctx, scratch, error_callback, r, inp_g_sc, cb, cbdata, n);
     }
 }
 
