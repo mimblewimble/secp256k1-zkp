@@ -29,7 +29,7 @@ struct secp256k1_aggsig_context_struct {
     secp256k1_scalar *secnonce;
     secp256k1_gej pubnonce_sum;
     size_t n_sigs;
-    secp256k1_rfc6979_hmac_sha256_t rng;
+    secp256k1_rfc6979_hmac_sha256 rng;
 };
 
 /* Compute the hash of all the data that every pubkey needs to sign */
@@ -37,7 +37,7 @@ static void secp256k1_compute_prehash(const secp256k1_context *ctx, unsigned cha
     size_t i;
     unsigned char buf[33];
     size_t buflen = sizeof(buf);
-    secp256k1_sha256_t hasher;
+    secp256k1_sha256 hasher;
     secp256k1_sha256_initialize(&hasher);
     /* Encode pubkeys */
     for (i = 0; i < n_pubkeys; i++) {
@@ -57,7 +57,7 @@ static void secp256k1_compute_prehash(const secp256k1_context *ctx, unsigned cha
 static int secp256k1_compute_sighash(secp256k1_scalar *r, const unsigned char *prehash, size_t index) {
     unsigned char output[32];
     int overflow;
-    secp256k1_sha256_t hasher;
+    secp256k1_sha256 hasher;
     secp256k1_sha256_initialize(&hasher);
     /* Encode index as a UTF8-style bignum */
     while (index > 0) {
@@ -274,7 +274,7 @@ int secp256k1_aggsig_verify(const secp256k1_context* ctx, secp256k1_scratch_spac
     secp256k1_compute_prehash(ctx, cbdata.prehash, pubkeys, n_pubkeys, &r_x, msg32);
 
     /* Compute sum sG - e_i*P_i, which should be R */
-    if (!secp256k1_ecmult_multi(&ctx->ecmult_ctx, scratch, &ctx->error_callback, &pk_sum, &g_sc, secp256k1_aggsig_verify_callback, &cbdata, n_pubkeys)) {
+    if (!secp256k1_ecmult_multi_var(&ctx->ecmult_ctx, scratch, &ctx->error_callback, &pk_sum, &g_sc, secp256k1_aggsig_verify_callback, &cbdata, n_pubkeys)) {
         return 0;
     }
 

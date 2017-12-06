@@ -148,7 +148,7 @@ static int secp256k1_generator_generate_internal(const secp256k1_context* ctx, s
     secp256k1_ge add;
     secp256k1_gej accum;
     int overflow;
-    secp256k1_sha256_t sha256;
+    secp256k1_sha256 sha256;
     unsigned char b32[32];
     int ret = 1;
 
