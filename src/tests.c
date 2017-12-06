@@ -4824,6 +4824,7 @@ void run_ecdsa_openssl(void) {
 
 #ifdef ENABLE_MODULE_SURJECTIONPROOF
 # include "modules/surjection/tests_impl.h"
+#endif
 
 #ifdef ENABLE_MODULE_AGGSIG
 # include "modules/aggsig/tests_impl.h"
