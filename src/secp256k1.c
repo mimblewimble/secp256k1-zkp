@@ -17,6 +17,7 @@
 #include "ecdsa_impl.h"
 #include "eckey_impl.h"
 #include "hash_impl.h"
+#include "scratch_impl.h"
 
 #ifdef ENABLE_MODULE_GENERATOR
 # include "include/secp256k1_generator.h"
@@ -127,6 +128,17 @@ void secp256k1_context_set_error_callback(secp256k1_context* ctx, void (*fun)(co
     }
     ctx->error_callback.fn = fun;
     ctx->error_callback.data = data;
+}
+
+secp256k1_scratch_space* secp256k1_scratch_space_create(const secp256k1_context* ctx, size_t init_size, size_t max_size) {
+    VERIFY_CHECK(ctx != NULL);
+    ARG_CHECK(max_size >= init_size);
+
+    return secp256k1_scratch_create(&ctx->error_callback, init_size, max_size);
+}
+
+void secp256k1_scratch_space_destroy(secp256k1_scratch_space* scratch) {
+    secp256k1_scratch_destroy(scratch);
 }
 
 static int secp256k1_pubkey_load(const secp256k1_context* ctx, secp256k1_ge* ge, const secp256k1_pubkey* pubkey) {
@@ -325,7 +337,7 @@ int secp256k1_ecdsa_verify(const secp256k1_context* ctx, const secp256k1_ecdsa_s
 static int nonce_function_rfc6979(unsigned char *nonce32, const unsigned char *msg32, const unsigned char *key32, const unsigned char *algo16, void *data, unsigned int counter) {
    unsigned char keydata[112];
    int keylen = 64;
-   secp256k1_rfc6979_hmac_sha256_t rng;
+   secp256k1_rfc6979_hmac_sha256 rng;
    unsigned int i;
    /* We feed a byte array to the PRNG as input, consisting of:
     * - the private key (32 bytes) and message (32 bytes), see RFC 6979 3.2d.
@@ -594,10 +606,6 @@ int secp256k1_ec_pubkey_combine(const secp256k1_context* ctx, secp256k1_pubkey *
 # include "modules/ecdh/main_impl.h"
 #endif
 
-#ifdef ENABLE_MODULE_SCHNORR
-# include "modules/schnorr/main_impl.h"
-#endif
-
 #ifdef ENABLE_MODULE_RECOVERY
 # include "modules/recovery/main_impl.h"
 #endif
@@ -616,4 +624,8 @@ int secp256k1_ec_pubkey_combine(const secp256k1_context* ctx, secp256k1_pubkey *
 
 #ifdef ENABLE_MODULE_SURJECTIONPROOF
 # include "modules/surjection/main_impl.h"
+#endif
+
+#ifdef ENABLE_MODULE_AGGSIG
+# include "modules/aggsig/main_impl.h"
 #endif

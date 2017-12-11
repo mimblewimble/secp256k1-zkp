@@ -4,8 +4,8 @@
  * file COPYING or http://www.opensource.org/licenses/mit-license.php.*
  **********************************************************************/
 
-#ifndef _SECP256K1_SCALAR_REPR_IMPL_H_
-#define _SECP256K1_SCALAR_REPR_IMPL_H_
+#ifndef SECP256K1_SCALAR_REPR_IMPL_H
+#define SECP256K1_SCALAR_REPR_IMPL_H
 
 #include "scalar.h"
 
@@ -35,6 +35,10 @@ SECP256K1_INLINE static int secp256k1_scalar_check_overflow(const secp256k1_scal
 static int secp256k1_scalar_add(secp256k1_scalar *r, const secp256k1_scalar *a, const secp256k1_scalar *b) {
     *r = (*a + *b) % EXHAUSTIVE_TEST_ORDER;
     return *r < *b;
+}
+
+static void secp256k1_scalar_numsub(secp256k1_scalar *r, const secp256k1_scalar *a, const secp256k1_scalar *b) {
+    *r = *a - *b;
 }
 
 static void secp256k1_scalar_cadd_bit(secp256k1_scalar *r, unsigned int bit, int flag) {
@@ -112,4 +116,14 @@ SECP256K1_INLINE static int secp256k1_scalar_eq(const secp256k1_scalar *a, const
     return *a == *b;
 }
 
-#endif
+SECP256K1_INLINE static int secp256k1_scalar_cmp_var(const secp256k1_scalar *a, const secp256k1_scalar *b) {
+    if (*a < *b) {
+        return -1;
+    }
+    if (*a > *b) {
+        return 1;
+    }
+    return 0;
+}
+
+#endif /* SECP256K1_SCALAR_REPR_IMPL_H */

@@ -4,8 +4,8 @@
  * file COPYING or http://www.opensource.org/licenses/mit-license.php.*
  **********************************************************************/
 
-#ifndef _SECP256K1_SCALAR_REPR_IMPL_H_
-#define _SECP256K1_SCALAR_REPR_IMPL_H_
+#ifndef SECP256K1_SCALAR_REPR_IMPL_H
+#define SECP256K1_SCALAR_REPR_IMPL_H
 
 #include "scalar.h"
 
@@ -103,6 +103,21 @@ static int secp256k1_scalar_add(secp256k1_scalar *r, const secp256k1_scalar *a, 
     VERIFY_CHECK(overflow == 0 || overflow == 1);
     secp256k1_scalar_reduce(r, overflow);
     return overflow;
+}
+
+static void secp256k1_scalar_numsub(secp256k1_scalar *r, const secp256k1_scalar *a, const secp256k1_scalar *b) {
+    int c0 = a->d[0] < b->d[0];
+    int c1 = a->d[1] < b->d[1] || (c0 && a->d[1] == b->d[1]);
+    int c2 = a->d[2] < b->d[2] || (c1 && a->d[2] == b->d[2]);
+#ifdef VERIFY
+    int c3 = a->d[3] < b->d[3] || (c2 && a->d[3] == b->d[3]);
+    CHECK(c3 == 0);
+#endif
+
+    r->d[3] = a->d[3] - b->d[3] - c2;
+    r->d[2] = a->d[2] - b->d[2] - c1;
+    r->d[1] = a->d[1] - b->d[1] - c0;
+    r->d[0] = a->d[0] - b->d[0];
 }
 
 static void secp256k1_scalar_cadd_bit(secp256k1_scalar *r, unsigned int bit, int flag) {
@@ -938,6 +953,19 @@ SECP256K1_INLINE static int secp256k1_scalar_eq(const secp256k1_scalar *a, const
     return ((a->d[0] ^ b->d[0]) | (a->d[1] ^ b->d[1]) | (a->d[2] ^ b->d[2]) | (a->d[3] ^ b->d[3])) == 0;
 }
 
+SECP256K1_INLINE static int secp256k1_scalar_cmp_var(const secp256k1_scalar *a, const secp256k1_scalar *b) {
+    int i;
+    for (i = 3; i >= 0; i--) {
+        if (a->d[i] > b->d[i]) {
+            return 1;
+        }
+        if (a->d[i] < b->d[i]) {
+            return -1;
+        }
+    }
+    return 0;
+}
+
 SECP256K1_INLINE static void secp256k1_scalar_mul_shift_var(secp256k1_scalar *r, const secp256k1_scalar *a, const secp256k1_scalar *b, unsigned int shift) {
     uint64_t l[8];
     unsigned int shiftlimbs;
@@ -955,4 +983,4 @@ SECP256K1_INLINE static void secp256k1_scalar_mul_shift_var(secp256k1_scalar *r,
     secp256k1_scalar_cadd_bit(r, 0, (l[(shift - 1) >> 6] >> ((shift - 1) & 0x3f)) & 1);
 }
 
-#endif
+#endif /* SECP256K1_SCALAR_REPR_IMPL_H */
