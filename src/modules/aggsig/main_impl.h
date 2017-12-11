@@ -7,6 +7,7 @@
 #ifndef _SECP256K1_MODULE_AGGSIG_MAIN_
 #define _SECP256K1_MODULE_AGGSIG_MAIN_
 
+#include <stdio.h>
 #include "include/secp256k1.h"
 #include "include/secp256k1_aggsig.h"
 #include "hash.h"
@@ -87,7 +88,6 @@ secp256k1_aggsig_context* secp256k1_aggsig_context_create(const secp256k1_contex
     memcpy(aggctx->pubkeys, pubkeys, n_pubkeys * sizeof(*aggctx->pubkeys));
     memset(aggctx->progress, 0, n_pubkeys * sizeof(*aggctx->progress));
     secp256k1_rfc6979_hmac_sha256_initialize(&aggctx->rng, seed, 32);
-
     return aggctx;
 }
 
@@ -159,7 +159,6 @@ int secp256k1_aggsig_partial_sign(const secp256k1_context* ctx, secp256k1_aggsig
         secp256k1_scalar_negate(&aggctx->secnonce[index], &aggctx->secnonce[index]);
         secp256k1_ge_neg(&tmp_ge, &tmp_ge);
     }
-
     secp256k1_fe_normalize(&tmp_ge.x);
     secp256k1_compute_prehash(ctx, prehash, aggctx->pubkeys, aggctx->n_sigs, &tmp_ge.x, msghash32);
     if (secp256k1_compute_sighash(&sighash, prehash, index) == 0) {
@@ -282,6 +281,18 @@ int secp256k1_aggsig_verify(const secp256k1_context* ctx, secp256k1_scratch_spac
     secp256k1_ge_set_gej(&pk_sum_ge, &pk_sum);
     return secp256k1_fe_equal_var(&r_x, &pk_sum_ge.x) &&
            secp256k1_gej_has_quad_y_var(&pk_sum);
+}
+
+int secp256k1_aggsig_build_scratch_and_verify(const secp256k1_context* ctx, 
+                                              const unsigned char *sig64,
+                                              const unsigned char *msg32,
+                                              const secp256k1_pubkey *pubkeys, 
+                                              size_t n_pubkeys) {
+    //just going to inefficiently allocate every time
+    secp256k1_scratch_space *scratch = secp256k1_scratch_space_create(ctx, 1024, 4096);
+    int returnval=secp256k1_aggsig_verify(ctx, scratch, sig64, msg32, pubkeys, n_pubkeys);
+    secp256k1_scratch_space_destroy(scratch);
+    return returnval;
 }
 
 void secp256k1_aggsig_context_destroy(secp256k1_aggsig_context *aggctx) {
