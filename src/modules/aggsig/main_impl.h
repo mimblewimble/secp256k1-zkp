@@ -33,6 +33,24 @@ struct secp256k1_aggsig_context_struct {
     secp256k1_rfc6979_hmac_sha256 rng;
 };
 
+/* Compute sighash for a single-signer */
+static int secp256k1_compute_sighash_single(secp256k1_scalar *r, const secp256k1_fe *nonce_ge_x, const unsigned char *msghash32) {
+    unsigned char output[32];
+    unsigned char buf[33];
+    int overflow;
+    secp256k1_sha256 hasher;
+    secp256k1_sha256_initialize(&hasher);
+    /* Encode nonce */
+    secp256k1_fe_get_b32(buf, nonce_ge_x);
+    secp256k1_sha256_write(&hasher, buf, 32);
+    /* Encode message */
+    secp256k1_sha256_write(&hasher, msghash32, 32);
+    /* Finish */
+    secp256k1_sha256_finalize(&hasher, output);
+    secp256k1_scalar_set_b32(r, output, &overflow);
+    return !overflow;
+}
+
 /* Compute the hash of all the data that every pubkey needs to sign */
 static void secp256k1_compute_prehash(const secp256k1_context *ctx, unsigned char *output, const secp256k1_pubkey *pubkeys, size_t n_pubkeys, const secp256k1_fe *nonce_ge_x, const unsigned char *msghash32) {
     size_t i;
@@ -91,10 +109,34 @@ secp256k1_aggsig_context* secp256k1_aggsig_context_create(const secp256k1_contex
     return aggctx;
 }
 
-/* TODO extend this to export the nonce if the user wants */
-int secp256k1_aggsig_generate_nonce(const secp256k1_context* ctx, secp256k1_aggsig_context* aggctx, size_t index) {
+int secp256k1_aggsig_generate_nonce_single(const secp256k1_context* ctx, secp256k1_scalar *secnonce, secp256k1_gej* pubnonce, secp256k1_rfc6979_hmac_sha256* rng) {
     int retry;
     unsigned char data[32];
+
+    VERIFY_CHECK(ctx != NULL);
+    ARG_CHECK(secp256k1_ecmult_gen_context_is_built(&ctx->ecmult_gen_ctx));
+    ARG_CHECK(secnonce != NULL);
+    ARG_CHECK(pubnonce != NULL);
+    ARG_CHECK(rng != NULL);
+
+    /* generate nonce from the RNG */
+    do {
+        secp256k1_rfc6979_hmac_sha256_generate(rng, data, 32);
+        secp256k1_scalar_set_b32(secnonce, data, &retry);
+        retry |= secp256k1_scalar_is_zero(secnonce);
+    } while (retry); /* This branch true is cryptographically unreachable. Requires sha256_hmac output > Fp. */
+    secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, pubnonce, secnonce);
+    memset(data, 0, 32);  /* TODO proper clear */
+    /* Negate nonce if needed to get y to be a quadratic residue */
+    if (!secp256k1_gej_has_quad_y_var(pubnonce)) {
+        secp256k1_scalar_negate(secnonce, secnonce);
+        secp256k1_gej_neg(pubnonce, pubnonce);
+    }
+    return 1;
+}
+
+/* TODO extend this to export the nonce if the user wants */
+int secp256k1_aggsig_generate_nonce(const secp256k1_context* ctx, secp256k1_aggsig_context* aggctx, size_t index) {
     secp256k1_gej pubnon;
 
     VERIFY_CHECK(ctx != NULL);
@@ -105,22 +147,67 @@ int secp256k1_aggsig_generate_nonce(const secp256k1_context* ctx, secp256k1_aggs
     if (aggctx->progress[index] != NONCE_PROGRESS_UNKNOWN) {
         return 0;
     }
-
-    /* generate nonce from the RNG */
-    do {
-        secp256k1_rfc6979_hmac_sha256_generate(&aggctx->rng, data, 32);
-        secp256k1_scalar_set_b32(&aggctx->secnonce[index], data, &retry);
-        retry |= secp256k1_scalar_is_zero(&aggctx->secnonce[index]);
-    } while (retry); /* This branch true is cryptographically unreachable. Requires sha256_hmac output > Fp. */
-    secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &pubnon, &aggctx->secnonce[index]);
-    memset(data, 0, 32);  /* TODO proper clear */
-    /* Negate nonce if needed to get y to be a quadratic residue */
-    if (!secp256k1_gej_has_quad_y_var(&pubnon)) {
-        secp256k1_scalar_negate(&aggctx->secnonce[index], &aggctx->secnonce[index]);
-        secp256k1_gej_neg(&pubnon, &pubnon);
+    if (secp256k1_aggsig_generate_nonce_single(ctx, &aggctx->secnonce[index], &pubnon, &aggctx->rng) == 0){
+        return 0;
     }
+
     secp256k1_gej_add_var(&aggctx->pubnonce_sum, &aggctx->pubnonce_sum, &pubnon, NULL);
     aggctx->progress[index] = NONCE_PROGRESS_OURS;
+    return 1;
+}
+
+int secp256k1_aggsig_sign_single(const secp256k1_context* ctx, unsigned char *sig64, secp256k1_pubkey *pubnonce, const unsigned char *msghash32, const unsigned char *seckey32, const unsigned char* seed){
+    secp256k1_scalar sighash;
+    secp256k1_rfc6979_hmac_sha256 rng;
+    secp256k1_scalar sec;
+    secp256k1_ge tmp_ge;
+    secp256k1_ge p;
+    secp256k1_gej pubnonce_j;
+    secp256k1_scalar secnonce;
+    secp256k1_ge final;
+    int overflow;
+
+    VERIFY_CHECK(ctx != NULL);
+    ARG_CHECK(secp256k1_ecmult_gen_context_is_built(&ctx->ecmult_gen_ctx));
+    ARG_CHECK(sig64 != NULL);
+    ARG_CHECK(pubnonce != NULL);
+    ARG_CHECK(msghash32 != NULL);
+    ARG_CHECK(seckey32 != NULL);
+    secp256k1_rfc6979_hmac_sha256_initialize(&rng, seed, 32);
+
+    /* generate nonce */
+    if (secp256k1_aggsig_generate_nonce_single(ctx, &secnonce, &pubnonce_j, &rng) == 0){
+        return 0;
+    }
+
+    secp256k1_rfc6979_hmac_sha256_finalize(&rng);
+
+    /* export public nonce (which looks like a pubkey anyhow) */
+    secp256k1_ge_set_gej(&p, &pubnonce_j);
+    secp256k1_pubkey_save(pubnonce, &p);
+
+    /* compute signature hash (in the simple case just message+pubnonce) */
+    secp256k1_ge_set_gej(&tmp_ge, &pubnonce_j);
+    secp256k1_fe_normalize(&tmp_ge.x);
+    secp256k1_compute_sighash_single(&sighash, &tmp_ge.x, msghash32);
+
+    /* calculate signature */
+    secp256k1_scalar_set_b32(&sec, seckey32, &overflow);
+    if (overflow) {
+        secp256k1_scalar_clear(&sec);
+        return 0;
+    }
+    secp256k1_scalar_mul(&sec, &sec, &sighash);
+    secp256k1_scalar_add(&sec, &sec, &secnonce);
+
+    /* finalize */
+    secp256k1_scalar_get_b32(sig64, &sec);
+    secp256k1_ge_set_gej(&final, &pubnonce_j);
+    secp256k1_fe_normalize_var(&final.x);
+    secp256k1_fe_get_b32(sig64 + 32, &final.x);
+
+    secp256k1_scalar_clear(&sec);
+
     return 1;
 }
 
@@ -288,11 +375,67 @@ int secp256k1_aggsig_build_scratch_and_verify(const secp256k1_context* ctx,
                                               const unsigned char *msg32,
                                               const secp256k1_pubkey *pubkeys, 
                                               size_t n_pubkeys) {
-    //just going to inefficiently allocate every time
+    /* just going to inefficiently allocate every time */
     secp256k1_scratch_space *scratch = secp256k1_scratch_space_create(ctx, 1024, 4096);
     int returnval=secp256k1_aggsig_verify(ctx, scratch, sig64, msg32, pubkeys, n_pubkeys);
     secp256k1_scratch_space_destroy(scratch);
     return returnval;
+}
+
+int secp256k1_aggsig_verify_single(
+    const secp256k1_context* ctx,
+    const unsigned char *sig64,
+    const unsigned char *msg32,
+    const secp256k1_pubkey *pubnonce,
+    const secp256k1_pubkey *pubkey){
+
+    secp256k1_scalar zero;
+    secp256k1_scalar sighash;
+    secp256k1_scalar g_sc;
+    secp256k1_ge g_pubkey;
+    secp256k1_fe r_x;
+    secp256k1_gej gej_eP;
+    secp256k1_gej gej_sG;
+    int overflow;
+
+    VERIFY_CHECK(ctx != NULL);
+    ARG_CHECK(secp256k1_ecmult_context_is_built(&ctx->ecmult_ctx));
+    ARG_CHECK(sig64 != NULL);
+    ARG_CHECK(msg32 != NULL);
+    ARG_CHECK(pubnonce != NULL);
+    ARG_CHECK(pubkey != NULL);
+
+    /* extract s */
+    secp256k1_scalar_set_b32(&g_sc, sig64, &overflow);
+    if (overflow) {
+        return 0;
+    }
+
+    /* extract R */
+    if (!secp256k1_fe_set_b32(&r_x, sig64 + 32)) {
+        return 0;
+    }
+
+    /* compute e = sighash */
+    secp256k1_compute_sighash_single(&sighash, &r_x, msg32);
+
+    /* find eP */
+    secp256k1_gej_set_infinity(&gej_eP);
+    secp256k1_pubkey_load(ctx, &g_pubkey, pubkey);
+    secp256k1_gej_add_ge(&gej_eP, &gej_eP, &g_pubkey);
+    secp256k1_scalar_set_int(&zero, 0);
+    secp256k1_ecmult(&ctx->ecmult_ctx, &gej_eP, &gej_eP, &sighash, &zero);
+
+    /* compute sG */
+    secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &gej_sG, &g_sc);
+
+    /* sG - eP */
+    secp256k1_gej_neg(&gej_eP, &gej_eP);
+    secp256k1_gej_add_var(&gej_sG, &gej_sG, &gej_eP, NULL);
+
+    return secp256k1_fe_equal_var(&r_x, &gej_sG.x) &&
+           secp256k1_gej_has_quad_y_var(&gej_sG);
+
 }
 
 void secp256k1_aggsig_context_destroy(secp256k1_aggsig_context *aggctx) {
