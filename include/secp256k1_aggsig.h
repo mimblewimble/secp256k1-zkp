@@ -86,7 +86,6 @@ SECP256K1_API int secp256k1_aggsig_generate_nonce(
  *  Returns: 1 on success, 0 on failure
  *  Args:    ctx: an existing context object, initialized for signing (cannot be NULL)
  *  Out:     sig64: the completed signature (cannot be NULL)
- *           pubnonce: the public nonce for verification (handily fits in a pubkey struct) (cannot be NULL)
  *  In:      msghash32: the message to sign (cannot be NULL)
  *           seckey32: the secret signing key (cannot be NULL)
  *           seed: a 32-byte seed to use for the nonce-generating RNG (cannot be NULL)
@@ -94,11 +93,10 @@ SECP256K1_API int secp256k1_aggsig_generate_nonce(
 int secp256k1_aggsig_sign_single(
     const secp256k1_context* ctx,
     unsigned char *sig64,
-    secp256k1_pubkey *pubnonce,
     const unsigned char *msghash32,
     const unsigned char *seckey32,
     const unsigned char* seed)
-SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(4) SECP256K1_ARG_NONNULL(5) SECP256K1_ARG_NONNULL(6) SECP256K1_WARN_UNUSED_RESULT;
+SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(4) SECP256K1_ARG_NONNULL(5) SECP256K1_WARN_UNUSED_RESULT;
 
 /** Generate a single signature part in an aggregated signature
  *
@@ -143,16 +141,14 @@ SECP256K1_API int secp256k1_aggsig_combine_signatures(
  *  Args:    ctx: an existing context object, initialized for signing (cannot be NULL)
  *  In:      sig64: signature (cannot be NULL)
  *           msg32: the message to verify (cannot be NULL)
- *           pubnonce: the public nonce for verification (cannot be NULL)
  *           pubkey: the public key (cannot be NULL)
  */
 int secp256k1_aggsig_verify_single(
     const secp256k1_context* ctx,
     const unsigned char *sig64,
     const unsigned char *msg32,
-    const secp256k1_pubkey *pubnonce,
     const secp256k1_pubkey *pubkey)
-SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(4) SECP256K1_ARG_NONNULL(5) SECP256K1_WARN_UNUSED_RESULT;
+SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(4) SECP256K1_WARN_UNUSED_RESULT;
 
 /** Verify an aggregate signature
  *

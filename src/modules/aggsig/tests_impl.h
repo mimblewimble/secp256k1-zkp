@@ -134,11 +134,11 @@ void test_aggsig_api(void) {
     CHECK(!secp256k1_aggsig_verify(vrfy, scratch, sig, msg, NULL, 5));
     CHECK(ecount == 20);
 
-    /* Test single api (just use pubkeys[4] to store public nonce */
+    /* Test single api */
     memset(sig, 0, sizeof(sig));
-    CHECK(secp256k1_aggsig_sign_single(sign, sig, &pubkeys[4], msg, seckeys[0], seed));
+    CHECK(secp256k1_aggsig_sign_single(sign, sig, msg, seckeys[0], seed));
     CHECK(ecount == 20);
-    CHECK(secp256k1_aggsig_verify_single(both, sig, msg, &pubkeys[4], &pubkeys[0]));
+    CHECK(secp256k1_aggsig_verify_single(both, sig, msg, &pubkeys[0]));
 
     /* cleanup */
     secp256k1_aggsig_context_destroy(aggctx);
