@@ -155,7 +155,7 @@ int secp256k1_aggsig_generate_nonce(const secp256k1_context* ctx, secp256k1_aggs
     return 1;
 }
 
-int secp256k1_aggsig_sign_single(const secp256k1_context* ctx, unsigned char *sig64, const unsigned char *msghash32, const unsigned char *seckey32, const unsigned char* seed){
+int secp256k1_aggsig_sign_single(const secp256k1_context* ctx, unsigned char *sig64, const unsigned char *msg32, const unsigned char *seckey32, const unsigned char* seed){
     secp256k1_scalar sighash;
     secp256k1_rfc6979_hmac_sha256 rng;
     secp256k1_scalar sec;
@@ -169,7 +169,7 @@ int secp256k1_aggsig_sign_single(const secp256k1_context* ctx, unsigned char *si
     VERIFY_CHECK(ctx != NULL);
     ARG_CHECK(secp256k1_ecmult_gen_context_is_built(&ctx->ecmult_gen_ctx));
     ARG_CHECK(sig64 != NULL);
-    ARG_CHECK(msghash32 != NULL);
+    ARG_CHECK(msg32 != NULL);
     ARG_CHECK(seckey32 != NULL);
     secp256k1_rfc6979_hmac_sha256_initialize(&rng, seed, 32);
 
@@ -187,7 +187,7 @@ int secp256k1_aggsig_sign_single(const secp256k1_context* ctx, unsigned char *si
         secp256k1_ge_neg(&tmp_ge, &tmp_ge);
     }
     secp256k1_fe_normalize(&tmp_ge.x);
-    secp256k1_compute_sighash_single(&sighash, &tmp_ge.x, msghash32);
+    secp256k1_compute_sighash_single(&sighash, &tmp_ge.x, msg32);
 
     /* calculate signature */
     secp256k1_scalar_set_b32(&sec, seckey32, &overflow);

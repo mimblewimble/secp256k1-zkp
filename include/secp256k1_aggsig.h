@@ -86,14 +86,14 @@ SECP256K1_API int secp256k1_aggsig_generate_nonce(
  *  Returns: 1 on success, 0 on failure
  *  Args:    ctx: an existing context object, initialized for signing (cannot be NULL)
  *  Out:     sig64: the completed signature (cannot be NULL)
- *  In:      msghash32: the message to sign (cannot be NULL)
+ *  In:      msg32: the message to sign (cannot be NULL)
  *           seckey32: the secret signing key (cannot be NULL)
  *           seed: a 32-byte seed to use for the nonce-generating RNG (cannot be NULL)
  */
 int secp256k1_aggsig_sign_single(
     const secp256k1_context* ctx,
     unsigned char *sig64,
-    const unsigned char *msghash32,
+    const unsigned char *msg32,
     const unsigned char *seckey32,
     const unsigned char* seed)
 SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(4) SECP256K1_ARG_NONNULL(5) SECP256K1_WARN_UNUSED_RESULT;
@@ -104,7 +104,7 @@ SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP2
  *  Args:    ctx: an existing context object, initialized for signing (cannot be NULL)
  *        aggctx: an aggsig context object (cannot be NULL)
  *  Out:   partial: the generated signature part (cannot be NULL)
- *  In:  msghash32: the message to sign (cannot be NULL)
+ *  In:  msg32: the message to sign (cannot be NULL)
  *        seckey32: the secret signing key (cannot be NULL)
  *           index: the index of this signature in the aggregate signature
  */
@@ -112,7 +112,7 @@ SECP256K1_API int secp256k1_aggsig_partial_sign(
     const secp256k1_context* ctx,
     secp256k1_aggsig_context* aggctx,
     secp256k1_aggsig_partial_signature *partial,
-    const unsigned char *msghash32,
+    const unsigned char *msg32,
     const unsigned char *seckey32,
     size_t index
 ) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(4) SECP256K1_ARG_NONNULL(5) SECP256K1_WARN_UNUSED_RESULT;
