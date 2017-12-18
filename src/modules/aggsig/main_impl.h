@@ -7,7 +7,6 @@
 #ifndef _SECP256K1_MODULE_AGGSIG_MAIN_
 #define _SECP256K1_MODULE_AGGSIG_MAIN_
 
-#include <stdio.h>
 #include "include/secp256k1.h"
 #include "include/secp256k1_aggsig.h"
 #include "hash.h"
@@ -162,6 +161,7 @@ int secp256k1_aggsig_sign_single(const secp256k1_context* ctx, unsigned char *si
     secp256k1_scalar sec;
     secp256k1_ge tmp_ge;
     secp256k1_gej pubnonce_j;
+
     secp256k1_scalar secnonce;
     secp256k1_ge final;
     int overflow;
@@ -182,6 +182,10 @@ int secp256k1_aggsig_sign_single(const secp256k1_context* ctx, unsigned char *si
 
     /* compute signature hash (in the simple case just message+pubnonce) */
     secp256k1_ge_set_gej(&tmp_ge, &pubnonce_j);
+    if (!secp256k1_gej_has_quad_y_var(&pubnonce_j)) {
+        secp256k1_scalar_negate(&secnonce, &secnonce);
+        secp256k1_ge_neg(&tmp_ge, &tmp_ge);
+    }
     secp256k1_fe_normalize(&tmp_ge.x);
     secp256k1_compute_sighash_single(&sighash, &tmp_ge.x, msghash32);
 
@@ -191,6 +195,7 @@ int secp256k1_aggsig_sign_single(const secp256k1_context* ctx, unsigned char *si
         secp256k1_scalar_clear(&sec);
         return 0;
     }
+
     secp256k1_scalar_mul(&sec, &sec, &sighash);
     secp256k1_scalar_add(&sec, &sec, &secnonce);
 
@@ -303,6 +308,7 @@ int secp256k1_aggsig_combine_signatures(const secp256k1_context* ctx, secp256k1_
 typedef struct {
     const secp256k1_context *ctx;
     unsigned char prehash[32];
+    secp256k1_scalar single_hash;
     const secp256k1_pubkey *pubkeys;
 } secp256k1_verify_callback_data;
 
@@ -376,19 +382,27 @@ int secp256k1_aggsig_build_scratch_and_verify(const secp256k1_context* ctx,
     return returnval;
 }
 
+static int secp256k1_aggsig_verify_callback_single(secp256k1_scalar *sc, secp256k1_ge *pt, size_t idx, void *data) {
+    secp256k1_verify_callback_data *cbdata = (secp256k1_verify_callback_data*) data;
+    secp256k1_scalar_negate(sc, &cbdata->single_hash);
+    secp256k1_pubkey_load(cbdata->ctx, pt, &cbdata->pubkeys[idx]);
+    return 1;
+}
+
 int secp256k1_aggsig_verify_single(
     const secp256k1_context* ctx,
     const unsigned char *sig64,
     const unsigned char *msg32,
     const secp256k1_pubkey *pubkey){
 
-    secp256k1_scalar zero;
-    secp256k1_scalar sighash;
     secp256k1_scalar g_sc;
-    secp256k1_ge g_pubkey;
     secp256k1_fe r_x;
-    secp256k1_gej gej_eP;
-    secp256k1_gej gej_sG;
+    secp256k1_gej pk_sum;
+    secp256k1_ge pk_sum_ge;
+    secp256k1_scalar sighash;
+    secp256k1_scratch_space *scratch;
+    secp256k1_verify_callback_data cbdata;
+
     int overflow;
 
     VERIFY_CHECK(ctx != NULL);
@@ -411,22 +425,22 @@ int secp256k1_aggsig_verify_single(
     /* compute e = sighash */
     secp256k1_compute_sighash_single(&sighash, &r_x, msg32);
 
-    /* find eP */
-    secp256k1_gej_set_infinity(&gej_eP);
-    secp256k1_pubkey_load(ctx, &g_pubkey, pubkey);
-    secp256k1_gej_add_ge(&gej_eP, &gej_eP, &g_pubkey);
-    secp256k1_scalar_set_int(&zero, 0);
-    secp256k1_ecmult(&ctx->ecmult_ctx, &gej_eP, &gej_eP, &sighash, &zero);
+    /* Populate callback data */
+    cbdata.ctx = ctx;
+    cbdata.pubkeys = pubkey;
+    cbdata.single_hash = sighash;
 
-    /* compute sG */
-    secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &gej_sG, &g_sc);
+    scratch = secp256k1_scratch_space_create(ctx, 1024, 4096);
+    /* Compute sG - eP, which should be R */
+    if (!secp256k1_ecmult_multi_var(&ctx->ecmult_ctx, scratch, &ctx->error_callback, &pk_sum, &g_sc, secp256k1_aggsig_verify_callback_single, &cbdata, 1)) {
+        return 0;
+    }
 
-    /* sG - eP */
-    secp256k1_gej_neg(&gej_eP, &gej_eP);
-    secp256k1_gej_add_var(&gej_sG, &gej_sG, &gej_eP, NULL);
+    secp256k1_scratch_space_destroy(scratch);
 
-    return secp256k1_fe_equal_var(&r_x, &gej_sG.x) &&
-           secp256k1_gej_has_quad_y_var(&gej_sG);
+    secp256k1_ge_set_gej(&pk_sum_ge, &pk_sum);
+    return secp256k1_fe_equal_var(&r_x, &pk_sum_ge.x) &&
+           secp256k1_gej_has_quad_y_var(&pk_sum);
 
 }
 

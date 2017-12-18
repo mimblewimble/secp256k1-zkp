@@ -22,6 +22,7 @@ void test_aggsig_api(void) {
     secp256k1_aggsig_context *aggctx;
     unsigned char seed[32] = { 1, 2, 3, 4, 0 };
     unsigned char sig[64];
+    unsigned char orig_sig;
     unsigned char *msg = seed;  /* shh ;) */
     int32_t ecount = 0;
     size_t i;
@@ -138,7 +139,15 @@ void test_aggsig_api(void) {
     memset(sig, 0, sizeof(sig));
     CHECK(secp256k1_aggsig_sign_single(sign, sig, msg, seckeys[0], seed));
     CHECK(ecount == 20);
-    CHECK(secp256k1_aggsig_verify_single(both, sig, msg, &pubkeys[0]));
+    CHECK(secp256k1_aggsig_verify_single(vrfy, sig, msg, &pubkeys[0]));
+    CHECK(!secp256k1_aggsig_verify_single(vrfy, sig, msg, &pubkeys[1]));
+    orig_sig=sig[0];
+    sig[0]=99;
+    CHECK(!secp256k1_aggsig_verify_single(vrfy, sig, msg, &pubkeys[0]));
+    sig[0]=orig_sig;
+    CHECK(secp256k1_aggsig_verify_single(vrfy, sig, msg, &pubkeys[0]));
+    msg[0]=99;
+    CHECK(!secp256k1_aggsig_verify_single(vrfy, sig, msg, &pubkeys[0]));
 
     /* cleanup */
     secp256k1_aggsig_context_destroy(aggctx);
