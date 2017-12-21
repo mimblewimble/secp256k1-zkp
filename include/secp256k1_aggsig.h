@@ -81,6 +81,20 @@ SECP256K1_API int secp256k1_aggsig_generate_nonce(
     size_t index
 ) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_WARN_UNUSED_RESULT;
 
+/** Generates and exports a secure nonce, of which the public part can be shared
+ *  and fed back for a later signature
+ *
+ *  Returns: 1 on success
+ *  Args:    ctx: an existing context object, initialized for signing (cannot be NULL)
+ *  In:    seed: A random seed value
+ *  Out:   secnonce32: The secure nonce (scalar)
+ */
+SECP256K1_API int secp256k1_aggsig_export_secnonce_single(
+    const secp256k1_context* ctx,
+    unsigned char* secnonce32,
+    const unsigned char* seed
+) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_WARN_UNUSED_RESULT;
+
 /** Generate a single-signer signature, without a stored context 
  *
  *  Returns: 1 on success, 0 on failure
@@ -90,7 +104,7 @@ SECP256K1_API int secp256k1_aggsig_generate_nonce(
  *           seckey32: the secret signing key (cannot be NULL)
  *           seed: a 32-byte seed to use for the nonce-generating RNG (cannot be NULL)
  */
-int secp256k1_aggsig_sign_single(
+SECP256K1_API int secp256k1_aggsig_sign_single(
     const secp256k1_context* ctx,
     unsigned char *sig64,
     const unsigned char *msg32,

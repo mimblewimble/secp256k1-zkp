@@ -108,6 +108,24 @@ secp256k1_aggsig_context* secp256k1_aggsig_context_create(const secp256k1_contex
     return aggctx;
 }
 
+int secp256k1_aggsig_export_secnonce_single(const secp256k1_context* ctx, unsigned char* secnonce32, const unsigned char* seed) {
+    secp256k1_scalar secnonce;
+    secp256k1_gej pubnonce;
+    secp256k1_rfc6979_hmac_sha256 rng;
+
+    VERIFY_CHECK(ctx != NULL);
+    ARG_CHECK(secp256k1_ecmult_gen_context_is_built(&ctx->ecmult_gen_ctx));
+    ARG_CHECK(secnonce32 != NULL);
+    secp256k1_rfc6979_hmac_sha256_initialize(&rng, seed, 32);
+
+    if (secp256k1_aggsig_generate_nonce_single(ctx, &secnonce, &pubnonce, &rng) == 0){
+       return 0;
+    }
+
+    secp256k1_scalar_get_b32(secnonce32, &secnonce);
+    return 1;
+}
+
 int secp256k1_aggsig_generate_nonce_single(const secp256k1_context* ctx, secp256k1_scalar *secnonce, secp256k1_gej* pubnonce, secp256k1_rfc6979_hmac_sha256* rng) {
     int retry;
     unsigned char data[32];
