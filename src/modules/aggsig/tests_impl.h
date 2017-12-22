@@ -136,8 +136,7 @@ void test_aggsig_api(void) {
     CHECK(ecount == 20);
 
     /* Test single api */
-    memset(sig, 0, sizeof(sig));
-    CHECK(secp256k1_aggsig_sign_single(sign, sig, msg, seckeys[0], seed));
+    CHECK(secp256k1_aggsig_sign_single(sign, sig, msg, seckeys[0], NULL, seed));
     CHECK(ecount == 20);
     CHECK(secp256k1_aggsig_verify_single(vrfy, sig, msg, &pubkeys[0]));
     CHECK(!secp256k1_aggsig_verify_single(vrfy, sig, msg, &pubkeys[1]));
@@ -148,6 +147,9 @@ void test_aggsig_api(void) {
     CHECK(secp256k1_aggsig_verify_single(vrfy, sig, msg, &pubkeys[0]));
     msg[0]=99;
     CHECK(!secp256k1_aggsig_verify_single(vrfy, sig, msg, &pubkeys[0]));
+
+    memset(sig, 0, sizeof(sig));
+    CHECK(secp256k1_aggsig_sign_single(sign, sig, msg, seckeys[0], msg, seed));
 
     /* cleanup */
     secp256k1_aggsig_context_destroy(aggctx);

@@ -108,24 +108,6 @@ secp256k1_aggsig_context* secp256k1_aggsig_context_create(const secp256k1_contex
     return aggctx;
 }
 
-int secp256k1_aggsig_export_secnonce_single(const secp256k1_context* ctx, unsigned char* secnonce32, const unsigned char* seed) {
-    secp256k1_scalar secnonce;
-    secp256k1_gej pubnonce;
-    secp256k1_rfc6979_hmac_sha256 rng;
-
-    VERIFY_CHECK(ctx != NULL);
-    ARG_CHECK(secp256k1_ecmult_gen_context_is_built(&ctx->ecmult_gen_ctx));
-    ARG_CHECK(secnonce32 != NULL);
-    secp256k1_rfc6979_hmac_sha256_initialize(&rng, seed, 32);
-
-    if (secp256k1_aggsig_generate_nonce_single(ctx, &secnonce, &pubnonce, &rng) == 0){
-       return 0;
-    }
-
-    secp256k1_scalar_get_b32(secnonce32, &secnonce);
-    return 1;
-}
-
 int secp256k1_aggsig_generate_nonce_single(const secp256k1_context* ctx, secp256k1_scalar *secnonce, secp256k1_gej* pubnonce, secp256k1_rfc6979_hmac_sha256* rng) {
     int retry;
     unsigned char data[32];
@@ -152,6 +134,24 @@ int secp256k1_aggsig_generate_nonce_single(const secp256k1_context* ctx, secp256
     return 1;
 }
 
+int secp256k1_aggsig_export_secnonce_single(const secp256k1_context* ctx, unsigned char* secnonce32, const unsigned char* seed) {
+    secp256k1_scalar secnonce;
+    secp256k1_gej pubnonce;
+    secp256k1_rfc6979_hmac_sha256 rng;
+
+    VERIFY_CHECK(ctx != NULL);
+    ARG_CHECK(secp256k1_ecmult_gen_context_is_built(&ctx->ecmult_gen_ctx));
+    ARG_CHECK(secnonce32 != NULL);
+    secp256k1_rfc6979_hmac_sha256_initialize(&rng, seed, 32);
+
+    if (secp256k1_aggsig_generate_nonce_single(ctx, &secnonce, &pubnonce, &rng) == 0){
+       return 0;
+    }
+
+    secp256k1_scalar_get_b32(secnonce32, &secnonce);
+    return 1;
+}
+
 /* TODO extend this to export the nonce if the user wants */
 int secp256k1_aggsig_generate_nonce(const secp256k1_context* ctx, secp256k1_aggsig_context* aggctx, size_t index) {
     secp256k1_gej pubnon;
@@ -173,7 +173,13 @@ int secp256k1_aggsig_generate_nonce(const secp256k1_context* ctx, secp256k1_aggs
     return 1;
 }
 
-int secp256k1_aggsig_sign_single(const secp256k1_context* ctx, unsigned char *sig64, const unsigned char *msg32, const unsigned char *seckey32, const unsigned char* seed){
+int secp256k1_aggsig_sign_single(const secp256k1_context* ctx, 
+    unsigned char *sig64,
+    const unsigned char *msg32,
+    const unsigned char *seckey32,
+    const unsigned char* secnonce32,
+    const unsigned char* seed){
+
     secp256k1_scalar sighash;
     secp256k1_rfc6979_hmac_sha256 rng;
     secp256k1_scalar sec;
@@ -183,20 +189,32 @@ int secp256k1_aggsig_sign_single(const secp256k1_context* ctx, unsigned char *si
     secp256k1_scalar secnonce;
     secp256k1_ge final;
     int overflow;
+    int retry;
 
     VERIFY_CHECK(ctx != NULL);
     ARG_CHECK(secp256k1_ecmult_gen_context_is_built(&ctx->ecmult_gen_ctx));
     ARG_CHECK(sig64 != NULL);
     ARG_CHECK(msg32 != NULL);
     ARG_CHECK(seckey32 != NULL);
-    secp256k1_rfc6979_hmac_sha256_initialize(&rng, seed, 32);
 
-    /* generate nonce */
-    if (secp256k1_aggsig_generate_nonce_single(ctx, &secnonce, &pubnonce_j, &rng) == 0){
-        return 0;
+    /* generate nonce if needed */
+    if (secnonce32==NULL){
+        secp256k1_rfc6979_hmac_sha256_initialize(&rng, seed, 32);
+        if (secp256k1_aggsig_generate_nonce_single(ctx, &secnonce, &pubnonce_j, &rng) == 0){
+            return 0;
+        }
+        secp256k1_rfc6979_hmac_sha256_finalize(&rng);
+    } else {
+        /* Use existing nonce */
+        secp256k1_scalar_set_b32(&secnonce, secnonce32, &retry);
+        secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &pubnonce_j, &secnonce);
+        /* TODO: Check if this is needed here */
+        /* Negate nonce if needed to get y to be a quadratic residue */
+        if (!secp256k1_gej_has_quad_y_var(&pubnonce_j)) {
+            secp256k1_scalar_negate(&secnonce, &secnonce);
+            secp256k1_gej_neg(&pubnonce_j, &pubnonce_j);
+        }
     }
-
-    secp256k1_rfc6979_hmac_sha256_finalize(&rng);
 
     /* compute signature hash (in the simple case just message+pubnonce) */
     secp256k1_ge_set_gej(&tmp_ge, &pubnonce_j);

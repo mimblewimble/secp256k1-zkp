@@ -102,6 +102,7 @@ SECP256K1_API int secp256k1_aggsig_export_secnonce_single(
  *  Out:     sig64: the completed signature (cannot be NULL)
  *  In:      msg32: the message to sign (cannot be NULL)
  *           seckey32: the secret signing key (cannot be NULL)
+ *           secnonce32: secret nonce to use. If NULL, a nonce will be generated
  *           seed: a 32-byte seed to use for the nonce-generating RNG (cannot be NULL)
  */
 SECP256K1_API int secp256k1_aggsig_sign_single(
@@ -109,8 +110,9 @@ SECP256K1_API int secp256k1_aggsig_sign_single(
     unsigned char *sig64,
     const unsigned char *msg32,
     const unsigned char *seckey32,
+    const unsigned char* secnonce32,
     const unsigned char* seed)
-SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(4) SECP256K1_ARG_NONNULL(5) SECP256K1_WARN_UNUSED_RESULT;
+SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(4) SECP256K1_ARG_NONNULL(6) SECP256K1_WARN_UNUSED_RESULT;
 
 /** Generate a single signature part in an aggregated signature
  *
