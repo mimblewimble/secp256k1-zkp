@@ -173,11 +173,12 @@ int secp256k1_aggsig_generate_nonce(const secp256k1_context* ctx, secp256k1_aggs
     return 1;
 }
 
-int secp256k1_aggsig_sign_single(const secp256k1_context* ctx, 
+int secp256k1_aggsig_sign_single(const secp256k1_context* ctx,
     unsigned char *sig64,
     const unsigned char *msg32,
     const unsigned char *seckey32,
     const unsigned char* secnonce32,
+    const unsigned char* pubnonce32,
     const unsigned char* seed){
 
     secp256k1_scalar sighash;
@@ -187,6 +188,7 @@ int secp256k1_aggsig_sign_single(const secp256k1_context* ctx,
     secp256k1_gej pubnonce_j;
 
     secp256k1_scalar secnonce;
+    secp256k1_fe pubnonce_override;
     secp256k1_ge final;
     int overflow;
     int retry;
@@ -223,7 +225,13 @@ int secp256k1_aggsig_sign_single(const secp256k1_context* ctx,
         secp256k1_ge_neg(&tmp_ge, &tmp_ge);
     }
     secp256k1_fe_normalize(&tmp_ge.x);
-    secp256k1_compute_sighash_single(&sighash, &tmp_ge.x, msg32);
+
+    if (pubnonce32 != NULL) {
+        secp256k1_fe_set_b32(&pubnonce_override, pubnonce32);
+        secp256k1_compute_sighash_single(&sighash, &pubnonce_override, msg32);
+    } else {
+        secp256k1_compute_sighash_single(&sighash, &tmp_ge.x, msg32);
+    }
 
     /* calculate signature */
     secp256k1_scalar_set_b32(&sec, seckey32, &overflow);
@@ -429,10 +437,12 @@ int secp256k1_aggsig_verify_single(
     const secp256k1_context* ctx,
     const unsigned char *sig64,
     const unsigned char *msg32,
+    const unsigned char *pubnonce32,
     const secp256k1_pubkey *pubkey){
 
     secp256k1_scalar g_sc;
     secp256k1_fe r_x;
+    secp256k1_fe pubnonce_override;
     secp256k1_gej pk_sum;
     secp256k1_ge pk_sum_ge;
     secp256k1_scalar sighash;
@@ -459,7 +469,12 @@ int secp256k1_aggsig_verify_single(
     }
 
     /* compute e = sighash */
-    secp256k1_compute_sighash_single(&sighash, &r_x, msg32);
+    if (pubnonce32 != NULL) {
+        secp256k1_fe_set_b32(&pubnonce_override, pubnonce32);
+        secp256k1_compute_sighash_single(&sighash, &pubnonce_override, msg32);
+    } else {
+        secp256k1_compute_sighash_single(&sighash, &r_x, msg32);
+    }
 
     /* Populate callback data */
     cbdata.ctx = ctx;

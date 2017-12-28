@@ -136,20 +136,27 @@ void test_aggsig_api(void) {
     CHECK(ecount == 20);
 
     /* Test single api */
-    CHECK(secp256k1_aggsig_sign_single(sign, sig, msg, seckeys[0], NULL, seed));
+    CHECK(secp256k1_aggsig_sign_single(sign, sig, msg, seckeys[0], NULL, NULL, seed));
     CHECK(ecount == 20);
-    CHECK(secp256k1_aggsig_verify_single(vrfy, sig, msg, &pubkeys[0]));
-    CHECK(!secp256k1_aggsig_verify_single(vrfy, sig, msg, &pubkeys[1]));
+    CHECK(secp256k1_aggsig_verify_single(vrfy, sig, msg, NULL, &pubkeys[0]));
+    CHECK(!secp256k1_aggsig_verify_single(vrfy, sig, msg, NULL, &pubkeys[1]));
     orig_sig=sig[0];
     sig[0]=99;
-    CHECK(!secp256k1_aggsig_verify_single(vrfy, sig, msg, &pubkeys[0]));
+    CHECK(!secp256k1_aggsig_verify_single(vrfy, sig, msg, NULL, &pubkeys[0]));
     sig[0]=orig_sig;
-    CHECK(secp256k1_aggsig_verify_single(vrfy, sig, msg, &pubkeys[0]));
+    CHECK(secp256k1_aggsig_verify_single(vrfy, sig, msg, NULL, &pubkeys[0]));
     msg[0]=99;
-    CHECK(!secp256k1_aggsig_verify_single(vrfy, sig, msg, &pubkeys[0]));
+    CHECK(!secp256k1_aggsig_verify_single(vrfy, sig, msg, NULL, &pubkeys[0]));
 
+    /* Overriding sec nonce */
     memset(sig, 0, sizeof(sig));
-    CHECK(secp256k1_aggsig_sign_single(sign, sig, msg, seckeys[0], msg, seed));
+    CHECK(secp256k1_aggsig_sign_single(sign, sig, msg, seckeys[0], seckeys[1], NULL, seed));
+    CHECK(secp256k1_aggsig_verify_single(vrfy, sig, msg, NULL, &pubkeys[0]));
+
+    /* Overriding sec nonce and pub nonce encoded in e */
+    memset(sig, 0, sizeof(sig));
+    CHECK(secp256k1_aggsig_sign_single(sign, sig, msg, seckeys[0], seckeys[1], seckeys[3], seed));
+    CHECK(secp256k1_aggsig_verify_single(vrfy, sig, msg, seckeys[3], &pubkeys[0]));
 
     /* cleanup */
     secp256k1_aggsig_context_destroy(aggctx);
