@@ -103,7 +103,7 @@ SECP256K1_API int secp256k1_aggsig_export_secnonce_single(
  *  In:      msg32: the message to sign (cannot be NULL)
  *           seckey32: the secret signing key (cannot be NULL)
  *           secnonce32: secret nonce to use. If NULL, a nonce will be generated
- *           pubnonce32: If this is non-NULL, encode this value in e instead of the derived
+ *           pubnonce: If this is non-NULL, encode this value in e instead of the derived
  *           public nonce of secnonce32
  *           seed: a 32-byte seed to use for the nonce-generating RNG (cannot be NULL)
  */
@@ -114,7 +114,7 @@ SECP256K1_API int secp256k1_aggsig_sign_single(
     const unsigned char *msg32,
     const unsigned char *seckey32,
     const unsigned char* secnonce32,
-    const unsigned char* pubnonce32,
+    const secp256k1_pubkey *pubnonce,
     const unsigned char* seed)
 SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(4) SECP256K1_ARG_NONNULL(7) SECP256K1_WARN_UNUSED_RESULT;
 
@@ -161,14 +161,14 @@ SECP256K1_API int secp256k1_aggsig_combine_signatures(
  *  Args:    ctx: an existing context object, initialized for signing (cannot be NULL)
  *  In:      sig64: signature (cannot be NULL)
  *           msg32: the message to verify (cannot be NULL)
- *           pubnonce32: if non-NULL, override the public nonce used to calculate e
+ *           pubnonce: if non-NULL, override the public nonce used to calculate e
  *           pubkey: the public key (cannot be NULL)
  */
 int secp256k1_aggsig_verify_single(
     const secp256k1_context* ctx,
     const unsigned char *sig64,
     const unsigned char *msg32,
-    const unsigned char *pubnonce32,
+    const secp256k1_pubkey *pubnonce,
     const secp256k1_pubkey *pubkey)
 SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(5) SECP256K1_WARN_UNUSED_RESULT;
 

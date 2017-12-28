@@ -33,17 +33,22 @@ struct secp256k1_aggsig_context_struct {
 };
 
 /* Compute sighash for a single-signer */
-static int secp256k1_compute_sighash_single(secp256k1_scalar *r, const secp256k1_fe *nonce_ge_x, const unsigned char *msghash32) {
+static int secp256k1_compute_sighash_single(const secp256k1_context *ctx, secp256k1_scalar *r, const secp256k1_pubkey *pubkey, const unsigned char *msghash32) {
     unsigned char output[32];
     unsigned char buf[33];
+    size_t buflen = sizeof(buf);
+
     int overflow;
     secp256k1_sha256 hasher;
     secp256k1_sha256_initialize(&hasher);
-    /* Encode nonce */
-    secp256k1_fe_get_b32(buf, nonce_ge_x);
-    secp256k1_sha256_write(&hasher, buf, 32);
+
+    /* Encode public nonce */
+    CHECK(secp256k1_ec_pubkey_serialize(ctx, buf, &buflen, pubkey, SECP256K1_EC_COMPRESSED));
+    secp256k1_sha256_write(&hasher, buf, sizeof(buf));
+
     /* Encode message */
     secp256k1_sha256_write(&hasher, msghash32, 32);
+
     /* Finish */
     secp256k1_sha256_finalize(&hasher, output);
     secp256k1_scalar_set_b32(r, output, &overflow);
@@ -178,7 +183,7 @@ int secp256k1_aggsig_sign_single(const secp256k1_context* ctx,
     const unsigned char *msg32,
     const unsigned char *seckey32,
     const unsigned char* secnonce32,
-    const unsigned char* pubnonce32,
+    const secp256k1_pubkey* pubnonce,
     const unsigned char* seed){
 
     secp256k1_scalar sighash;
@@ -186,9 +191,9 @@ int secp256k1_aggsig_sign_single(const secp256k1_context* ctx,
     secp256k1_scalar sec;
     secp256k1_ge tmp_ge;
     secp256k1_gej pubnonce_j;
+    secp256k1_pubkey pub_tmp;
 
     secp256k1_scalar secnonce;
-    secp256k1_fe pubnonce_override;
     secp256k1_ge final;
     int overflow;
     int retry;
@@ -226,13 +231,12 @@ int secp256k1_aggsig_sign_single(const secp256k1_context* ctx,
     }
     secp256k1_fe_normalize(&tmp_ge.x);
 
-    if (pubnonce32 != NULL) {
-        secp256k1_fe_set_b32(&pubnonce_override, pubnonce32);
-        secp256k1_compute_sighash_single(&sighash, &pubnonce_override, msg32);
+    if (pubnonce != NULL) {
+        secp256k1_compute_sighash_single(ctx, &sighash, pubnonce, msg32);
     } else {
-        secp256k1_compute_sighash_single(&sighash, &tmp_ge.x, msg32);
+        secp256k1_pubkey_save(&pub_tmp, &tmp_ge);
+        secp256k1_compute_sighash_single(ctx, &sighash, &pub_tmp, msg32);
     }
-
     /* calculate signature */
     secp256k1_scalar_set_b32(&sec, seckey32, &overflow);
     if (overflow) {
@@ -437,17 +441,18 @@ int secp256k1_aggsig_verify_single(
     const secp256k1_context* ctx,
     const unsigned char *sig64,
     const unsigned char *msg32,
-    const unsigned char *pubnonce32,
+    const secp256k1_pubkey *pubnonce,
     const secp256k1_pubkey *pubkey){
 
     secp256k1_scalar g_sc;
     secp256k1_fe r_x;
-    secp256k1_fe pubnonce_override;
     secp256k1_gej pk_sum;
     secp256k1_ge pk_sum_ge;
     secp256k1_scalar sighash;
     secp256k1_scratch_space *scratch;
     secp256k1_verify_callback_data cbdata;
+    secp256k1_ge tmp_pubnonce_ge;
+    secp256k1_pubkey tmp_pk;
 
     int overflow;
 
@@ -469,11 +474,12 @@ int secp256k1_aggsig_verify_single(
     }
 
     /* compute e = sighash */
-    if (pubnonce32 != NULL) {
-        secp256k1_fe_set_b32(&pubnonce_override, pubnonce32);
-        secp256k1_compute_sighash_single(&sighash, &pubnonce_override, msg32);
+    if (pubnonce != NULL) {
+        secp256k1_compute_sighash_single(ctx, &sighash, pubnonce, msg32);
     } else {
-        secp256k1_compute_sighash_single(&sighash, &r_x, msg32);
+        secp256k1_ge_set_xquad(&tmp_pubnonce_ge, &r_x);
+        secp256k1_pubkey_save(&tmp_pk, &tmp_pubnonce_ge);
+        secp256k1_compute_sighash_single(ctx, &sighash, &tmp_pk, msg32);
     }
 
     /* Populate callback data */

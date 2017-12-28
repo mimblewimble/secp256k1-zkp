@@ -136,6 +136,7 @@ void test_aggsig_api(void) {
     CHECK(ecount == 20);
 
     /* Test single api */
+    memset(sig, 0, sizeof(sig));
     CHECK(secp256k1_aggsig_sign_single(sign, sig, msg, seckeys[0], NULL, NULL, seed));
     CHECK(ecount == 20);
     CHECK(secp256k1_aggsig_verify_single(vrfy, sig, msg, NULL, &pubkeys[0]));
@@ -155,8 +156,8 @@ void test_aggsig_api(void) {
 
     /* Overriding sec nonce and pub nonce encoded in e */
     memset(sig, 0, sizeof(sig));
-    CHECK(secp256k1_aggsig_sign_single(sign, sig, msg, seckeys[0], seckeys[1], seckeys[3], seed));
-    CHECK(secp256k1_aggsig_verify_single(vrfy, sig, msg, seckeys[3], &pubkeys[0]));
+    CHECK(secp256k1_aggsig_sign_single(sign, sig, msg, seckeys[0], seckeys[1], &pubkeys[3], seed));
+    CHECK(secp256k1_aggsig_verify_single(vrfy, sig, msg, &pubkeys[3], &pubkeys[0]));
 
     /* cleanup */
     secp256k1_aggsig_context_destroy(aggctx);
