@@ -352,6 +352,57 @@ int secp256k1_aggsig_combine_signatures(const secp256k1_context* ctx, secp256k1_
     return 1;
 }
 
+int secp256k1_aggsig_add_signatures_single(const secp256k1_context* ctx, unsigned char *sig64, const unsigned char* sig1_64, const unsigned char* sig2_64, secp256k1_pubkey* pubnonce1, secp256k1_pubkey* pubnonce2) {
+    secp256k1_scalar s;
+    secp256k1_ge final;
+    secp256k1_scalar tmp;
+    secp256k1_gej pubnonce_sum;
+    const secp256k1_pubkey *nonces[2];
+    secp256k1_pubkey noncesum;
+    secp256k1_ge noncesum_pt;
+    int overflow;
+
+    VERIFY_CHECK(ctx != NULL);
+    ARG_CHECK(sig64 != NULL);
+    ARG_CHECK(sig1_64 != NULL);
+    ARG_CHECK(sig2_64 != NULL);
+    ARG_CHECK(pubnonce1 != NULL);
+    ARG_CHECK(pubnonce2 != NULL);
+    (void) ctx;
+
+    /* Add signature portions together */
+    secp256k1_scalar_set_int(&s, 0);
+    secp256k1_scalar_set_b32(&tmp, sig1_64, &overflow);
+    if (overflow) {
+        return 0;
+    }
+    secp256k1_scalar_add(&s, &s, &tmp);
+    secp256k1_scalar_set_b32(&tmp, sig2_64, &overflow);
+    if (overflow) {
+        return 0;
+    }
+    secp256k1_scalar_add(&s, &s, &tmp);
+
+    /* Add nonces together */
+    nonces[0]=pubnonce1;
+    nonces[1]=pubnonce2;
+    CHECK(secp256k1_ec_pubkey_combine(ctx, &noncesum, nonces, 2) == 1);
+
+    secp256k1_gej_set_infinity(&pubnonce_sum);
+    secp256k1_pubkey_load(ctx, &noncesum_pt, &noncesum);
+    secp256k1_gej_add_ge(&pubnonce_sum, &pubnonce_sum, &noncesum_pt);
+
+    if (!secp256k1_gej_has_quad_y_var(&pubnonce_sum)) {
+				printf("NEGATINGGGGG");
+        secp256k1_gej_neg(&pubnonce_sum, &pubnonce_sum);
+    }
+
+    secp256k1_scalar_get_b32(sig64, &s);
+    secp256k1_ge_set_gej(&final, &pubnonce_sum);
+    secp256k1_fe_normalize_var(&final.x);
+    secp256k1_fe_get_b32(sig64 + 32, &final.x);
+    return 1;
+}
 
 typedef struct {
     const secp256k1_context *ctx;

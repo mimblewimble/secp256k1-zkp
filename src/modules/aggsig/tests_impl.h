@@ -159,6 +159,9 @@ void test_aggsig_api(void) {
     CHECK(secp256k1_aggsig_sign_single(sign, sig, msg, seckeys[0], seckeys[1], &pubkeys[3], seed));
     CHECK(secp256k1_aggsig_verify_single(vrfy, sig, msg, &pubkeys[3], &pubkeys[0]));
 
+    /* Add 2 sigs and nonces */
+    CHECK(secp256k1_aggsig_add_signatures_single(sign, sig, sig, sig, &pubkeys[4], &pubkeys[5]));
+
     /* cleanup */
     secp256k1_aggsig_context_destroy(aggctx);
     secp256k1_scratch_space_destroy(scratch);

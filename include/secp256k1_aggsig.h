@@ -155,6 +155,27 @@ SECP256K1_API int secp256k1_aggsig_combine_signatures(
     size_t n_sigs
 ) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(4) SECP256K1_WARN_UNUSED_RESULT;
 
+/** Simple addition of two signatures + two public nonces into a single signature
+ *
+ *  Returns: 1 on success, 0 on failure
+ *  Args:    ctx: an existing context object, initialized for signing (cannot be NULL)
+ *  Out:     sig64: the completed signature (s1+s2,n1+n2) (cannot be NULL)
+ *  In:     sig1_64: a signature (from which s1 will2be taken)
+ *          sig2_64: another signature (from which s1 will be taken)
+ *          pubnonce1: public nonce1
+ *          pubnonce2: public nonce2 (to be added to 1)
+ */
+
+SECP256K1_API int secp256k1_aggsig_add_signatures_single(
+    const secp256k1_context* ctx,
+    unsigned char *sig64,
+    const unsigned char* sig1_64,
+    const unsigned char* sig2_64,
+    secp256k1_pubkey* pubnonce1,
+    secp256k1_pubkey* pubnonce2
+) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(4) SECP256K1_ARG_NONNULL(5) SECP256K1_ARG_NONNULL(6) SECP256K1_WARN_UNUSED_RESULT;
+
+
 /** Verify a single-signer signature, without a stored context 
  *
  *  Returns: 1 on success, 0 on failure
