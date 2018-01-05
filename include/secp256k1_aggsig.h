@@ -89,11 +89,12 @@ SECP256K1_API int secp256k1_aggsig_generate_nonce(
  *  In:    seed: A random seed value
  *  Out:   secnonce32: The secure nonce (scalar)
  */
-SECP256K1_API int secp256k1_aggsig_export_secnonce_single(
+SECP256K1_API int secp256k1_aggsig_export_nonces_single(
     const secp256k1_context* ctx,
     unsigned char* secnonce32,
+    secp256k1_pubkey* pubkey_nonce,
     const unsigned char* seed
-) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_WARN_UNUSED_RESULT;
+) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(4) SECP256K1_WARN_UNUSED_RESULT;
 
 /** Generate a single-signer signature, without a stored context 
  *
@@ -105,6 +106,7 @@ SECP256K1_API int secp256k1_aggsig_export_secnonce_single(
  *           secnonce32: secret nonce to use. If NULL, a nonce will be generated
  *           pubnonce: If this is non-NULL, encode this value in e instead of the derived
  *           public nonce of secnonce32
+ *           final_nonce_sum: If intending to add the signatures, include the final nonce sum to know whether the sec nonce should be negated
  *           seed: a 32-byte seed to use for the nonce-generating RNG (cannot be NULL)
  */
 
@@ -115,8 +117,9 @@ SECP256K1_API int secp256k1_aggsig_sign_single(
     const unsigned char *seckey32,
     const unsigned char* secnonce32,
     const secp256k1_pubkey *pubnonce,
+    const unsigned int negate,
     const unsigned char* seed)
-SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(4) SECP256K1_ARG_NONNULL(7) SECP256K1_WARN_UNUSED_RESULT;
+SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(4) SECP256K1_ARG_NONNULL(7) SECP256K1_ARG_NONNULL(8) SECP256K1_WARN_UNUSED_RESULT;
 
 /** Generate a single signature part in an aggregated signature
  *
@@ -230,6 +233,7 @@ SECP256K1_API int secp256k1_aggsig_build_scratch_and_verify(
     size_t n_pubkeys
 ) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(4) SECP256K1_WARN_UNUSED_RESULT;
 
+SECP256K1_API int secp256k1_aggsig_add_pubnonces_single(const secp256k1_context* ctx, secp256k1_pubkey* pubnonce, unsigned int* negate, const secp256k1_pubkey* pubnonce1, const secp256k1_pubkey* pubnonce2);
 # ifdef __cplusplus
 }
 # endif
