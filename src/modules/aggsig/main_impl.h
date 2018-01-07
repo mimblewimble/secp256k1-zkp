@@ -183,15 +183,17 @@ int secp256k1_aggsig_sign_single(const secp256k1_context* ctx,
     const unsigned char *msg32,
     const unsigned char *seckey32,
     const unsigned char* secnonce32,
-    const secp256k1_pubkey* pubnonce,
-    const unsigned int negate,
+    const secp256k1_pubkey* pubnonce_for_e,
+    const secp256k1_pubkey* pubnonce_total,
     const unsigned char* seed){
 
     secp256k1_scalar sighash;
     secp256k1_rfc6979_hmac_sha256 rng;
     secp256k1_scalar sec;
     secp256k1_ge tmp_ge;
+    secp256k1_ge total_tmp_ge;
     secp256k1_gej pubnonce_j;
+    secp256k1_gej pubnonce_total_j;
     secp256k1_pubkey pub_tmp;
 
     secp256k1_scalar secnonce;
@@ -213,54 +215,32 @@ int secp256k1_aggsig_sign_single(const secp256k1_context* ctx,
         }
         secp256k1_rfc6979_hmac_sha256_finalize(&rng);
         secp256k1_ge_set_gej(&tmp_ge, &pubnonce_j);
-        if (!secp256k1_gej_has_quad_y_var(&pubnonce_j)) {
-						secp256k1_scalar_negate(&secnonce, &secnonce);
-						secp256k1_gej_neg(&pubnonce_j, &pubnonce_j);
-				}
-				secp256k1_fe_normalize(&tmp_ge.x);
     } else {
-        /* Use existing nonce */
-        /* Calculate what this + pub nonce would be normally */
         secp256k1_scalar_set_b32(&secnonce, secnonce32, &retry);
-				secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &pubnonce_j, &secnonce);
-				/* Negate nonce if needed to get y to be a quadratic residue */
-				if (!secp256k1_gej_has_quad_y_var(&pubnonce_j)) {
-						printf("NO QUAD Y VAR\n");
-						/* Comment out: partial validation doesn't work,
-						 * leave in: summed validation doesn't work */
-						/*secp256k1_scalar_negate(&secnonce, &secnonce);*/
-				}
-
+        secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &pubnonce_j, &secnonce);
         secp256k1_ge_set_gej(&tmp_ge, &pubnonce_j);
 
-        /* And negate if it should be negated */
-        if (negate) {
-            printf("NEGATE\n");
-            secp256k1_scalar_negate(&secnonce, &secnonce);
-						secp256k1_gej_neg(&pubnonce_j, &pubnonce_j);
-						secp256k1_ge_set_gej(&tmp_ge, &pubnonce_j);
+        if (pubnonce_total!=NULL) {
+            secp256k1_gej_set_infinity(&pubnonce_total_j);
+            secp256k1_pubkey_load(ctx, &total_tmp_ge, pubnonce_total);
+            secp256k1_gej_add_ge(&pubnonce_total_j, &pubnonce_total_j, &total_tmp_ge);
+            if (!secp256k1_gej_has_quad_y_var(&pubnonce_total_j)) {
+                secp256k1_scalar_negate(&secnonce, &secnonce);
+            }
+        } else {
+            if (!secp256k1_gej_has_quad_y_var(&pubnonce_j)) {
+                secp256k1_scalar_negate(&secnonce, &secnonce);
+                secp256k1_gej_neg(&pubnonce_j, &pubnonce_j);
+                secp256k1_ge_neg(&tmp_ge, &tmp_ge);
+            }
         }
-
-				/*if ((no_quad_y && !negate) || (!no_quad_y && negate)){
-						printf("WAT DOO TO ALLOW PARTIAL CHECK TO WORK?\n");
-				}*/
-        secp256k1_fe_normalize(&tmp_ge.x);
     }
 
-#if 0
-    if (!secp256k1_gej_has_quad_y_var(&pubnonce_j)) {
-        printf("Should negate....\n");
-        /*secp256k1_gej_neg(&pubnonce_j, &pubnonce_j);*/
-        secp256k1_scalar_negate(&secnonce, &secnonce);
-        /*secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &pubnonce_j, &secnonce);*/
-        secp256k1_ge_neg(&tmp_ge, &tmp_ge);
-    }
-#endif
-    /*secp256k1_fe_normalize(&tmp_ge.x);*/
+    secp256k1_fe_normalize(&tmp_ge.x);
 
     /* compute signature hash (in the simple case just message+pubnonce) */
-    if (pubnonce != NULL) {
-        secp256k1_compute_sighash_single(ctx, &sighash, pubnonce, msg32);
+    if (pubnonce_for_e != NULL) {
+        secp256k1_compute_sighash_single(ctx, &sighash, pubnonce_for_e, msg32);
     } else {
         secp256k1_pubkey_save(&pub_tmp, &tmp_ge);
         secp256k1_compute_sighash_single(ctx, &sighash, &pub_tmp, msg32);
@@ -380,50 +360,19 @@ int secp256k1_aggsig_combine_signatures(const secp256k1_context* ctx, secp256k1_
     return 1;
 }
 
-
-int secp256k1_aggsig_add_pubnonces_single(const secp256k1_context* ctx, secp256k1_pubkey* pubnonce, unsigned int* negate, const secp256k1_pubkey* pubnonce1, const secp256k1_pubkey* pubnonce2) {
-    secp256k1_gej pubnonce_sum;
-    secp256k1_ge noncesum_pt;
-    secp256k1_ge tmp_ge;
-
-    VERIFY_CHECK(ctx != NULL);
-    ARG_CHECK(pubnonce != NULL);
-    ARG_CHECK(pubnonce1 != NULL);
-    ARG_CHECK(pubnonce2 != NULL);
-
-    *negate = 0;
-
-    /* Add nonces together */
-    secp256k1_gej_set_infinity(&pubnonce_sum);
-    secp256k1_pubkey_load(ctx, &noncesum_pt, pubnonce1);
-    secp256k1_gej_add_ge(&pubnonce_sum, &pubnonce_sum, &noncesum_pt);
-    secp256k1_pubkey_load(ctx, &noncesum_pt, pubnonce2);
-    secp256k1_gej_add_ge(&pubnonce_sum, &pubnonce_sum, &noncesum_pt);
-
-    if (!secp256k1_gej_has_quad_y_var(&pubnonce_sum)) {
-        secp256k1_gej_neg(&pubnonce_sum, &pubnonce_sum);
-        *negate = 1;
-    }
-
-    secp256k1_ge_set_gej(&tmp_ge, &pubnonce_sum);
-    secp256k1_pubkey_save(pubnonce, &tmp_ge);
-    return 1;
-}
-
-int secp256k1_aggsig_add_signatures_single(const secp256k1_context* ctx, unsigned char *sig64, const unsigned char* sig1_64, const unsigned char* sig2_64, secp256k1_pubkey* pubnonce1, secp256k1_pubkey* pubnonce2) {
+int secp256k1_aggsig_add_signatures_single(const secp256k1_context* ctx, unsigned char *sig64, const unsigned char* sig1_64, const unsigned char* sig2_64, const secp256k1_pubkey* pubnonce_total) {
     secp256k1_scalar s;
     secp256k1_ge final;
     secp256k1_scalar tmp;
-    secp256k1_gej pubnonce_sum;
     secp256k1_ge noncesum_pt;
+    secp256k1_gej pubnonce_total_j;
     int overflow;
 
     VERIFY_CHECK(ctx != NULL);
     ARG_CHECK(sig64 != NULL);
     ARG_CHECK(sig1_64 != NULL);
     ARG_CHECK(sig2_64 != NULL);
-    ARG_CHECK(pubnonce1 != NULL);
-    ARG_CHECK(pubnonce2 != NULL);
+    ARG_CHECK(pubnonce_total != NULL);
     (void) ctx;
 
     /* Add signature portions together */
@@ -439,19 +388,16 @@ int secp256k1_aggsig_add_signatures_single(const secp256k1_context* ctx, unsigne
     }
     secp256k1_scalar_add(&s, &s, &tmp);
 
-    /* Add nonces together */
-    secp256k1_gej_set_infinity(&pubnonce_sum);
-    secp256k1_pubkey_load(ctx, &noncesum_pt, pubnonce1);
-    secp256k1_gej_add_ge(&pubnonce_sum, &pubnonce_sum, &noncesum_pt);
-    secp256k1_pubkey_load(ctx, &noncesum_pt, pubnonce2);
-    secp256k1_gej_add_ge(&pubnonce_sum, &pubnonce_sum, &noncesum_pt);
-
-    if (!secp256k1_gej_has_quad_y_var(&pubnonce_sum)) {
-        secp256k1_gej_neg(&pubnonce_sum, &pubnonce_sum);
+    /* nonces should already be totalled */
+    secp256k1_gej_set_infinity(&pubnonce_total_j);
+    secp256k1_pubkey_load(ctx, &noncesum_pt, pubnonce_total);
+    secp256k1_gej_add_ge(&pubnonce_total_j, &pubnonce_total_j, &noncesum_pt);
+    if (!secp256k1_gej_has_quad_y_var(&pubnonce_total_j)) {
+        secp256k1_gej_neg(&pubnonce_total_j, &pubnonce_total_j);
     }
 
     secp256k1_scalar_get_b32(sig64, &s);
-    secp256k1_ge_set_gej(&final, &pubnonce_sum);
+    secp256k1_ge_set_gej(&final, &pubnonce_total_j);
     secp256k1_fe_normalize_var(&final.x);
     secp256k1_fe_get_b32(sig64 + 32, &final.x);
     return 1;
@@ -546,7 +492,8 @@ int secp256k1_aggsig_verify_single(
     const unsigned char *sig64,
     const unsigned char *msg32,
     const secp256k1_pubkey *pubnonce,
-    const secp256k1_pubkey *pubkey){
+    const secp256k1_pubkey *pubkey,
+    const int is_partial){
 
     secp256k1_scalar g_sc;
     secp256k1_fe r_x;
@@ -559,6 +506,7 @@ int secp256k1_aggsig_verify_single(
     secp256k1_pubkey tmp_pk;
 
     int overflow;
+    int return_check=0;
 
     VERIFY_CHECK(ctx != NULL);
     ARG_CHECK(secp256k1_ecmult_context_is_built(&ctx->ecmult_ctx));
@@ -600,8 +548,13 @@ int secp256k1_aggsig_verify_single(
     secp256k1_scratch_space_destroy(scratch);
 
     secp256k1_ge_set_gej(&pk_sum_ge, &pk_sum);
-    return secp256k1_fe_equal_var(&r_x, &pk_sum_ge.x) &&
-           secp256k1_gej_has_quad_y_var(&pk_sum);
+
+    return_check = secp256k1_fe_equal_var(&r_x, &pk_sum_ge.x);
+    if (!is_partial){
+        return return_check && secp256k1_gej_has_quad_y_var(&pk_sum);
+    } else {
+        return return_check;
+    }
 
 }
 

@@ -16,6 +16,7 @@ void test_aggsig_api(void) {
     secp256k1_context *vrfy = secp256k1_context_create(SECP256K1_CONTEXT_VERIFY);
     secp256k1_context *both = secp256k1_context_create(SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
     secp256k1_scratch_space *scratch = secp256k1_scratch_space_create(none, 1024, 4096);
+    secp256k1_scalar tmp_s;
     unsigned char seckeys[5][32];
     secp256k1_pubkey pubkeys[5];
     secp256k1_aggsig_partial_signature partials[5];
@@ -25,12 +26,12 @@ void test_aggsig_api(void) {
     unsigned char sig2[64];
     unsigned char combined_sig[64];
     unsigned char sec_nonces[5][32];
-    unsigned int negate;
     secp256k1_pubkey pub_nonces[5];
     unsigned char orig_sig;
     unsigned char *msg = seed;  /* shh ;) */
     const secp256k1_pubkey* pubkey_combiner[2];
     secp256k1_pubkey combiner_sum;
+    secp256k1_pubkey combiner_sum_2;
     int32_t ecount = 0;
 
     size_t i;
@@ -45,7 +46,6 @@ void test_aggsig_api(void) {
     secp256k1_context_set_illegal_callback(both, counting_illegal_callback_fn, &ecount);
 
     for (i = 0; i < 5; i++) {
-        secp256k1_scalar tmp_s;
         random_scalar_order_test(&tmp_s);
         secp256k1_scalar_get_b32(seckeys[i], &tmp_s);
         CHECK(secp256k1_ec_pubkey_create(ctx, &pubkeys[i], seckeys[i]) == 1);
@@ -145,76 +145,79 @@ void test_aggsig_api(void) {
 
     /* Test single api */
     memset(sig, 0, sizeof(sig));
-    CHECK(secp256k1_aggsig_sign_single(sign, sig, msg, seckeys[0], NULL, NULL, 0, seed));
+    CHECK(secp256k1_aggsig_sign_single(sign, sig, msg, seckeys[0], NULL, NULL, NULL, seed));
     CHECK(ecount == 20);
-    CHECK(secp256k1_aggsig_verify_single(vrfy, sig, msg, NULL, &pubkeys[0]));
-    CHECK(!secp256k1_aggsig_verify_single(vrfy, sig, msg, NULL, &pubkeys[1]));
+    CHECK(secp256k1_aggsig_verify_single(vrfy, sig, msg, NULL, &pubkeys[0], 0));
+    CHECK(!secp256k1_aggsig_verify_single(vrfy, sig, msg, NULL, &pubkeys[1], 0));
     orig_sig=sig[0];
     sig[0]=99;
-    CHECK(!secp256k1_aggsig_verify_single(vrfy, sig, msg, NULL, &pubkeys[0]));
+    CHECK(!secp256k1_aggsig_verify_single(vrfy, sig, msg, NULL, &pubkeys[0], 0));
     sig[0]=orig_sig;
-    CHECK(secp256k1_aggsig_verify_single(vrfy, sig, msg, NULL, &pubkeys[0]));
+    CHECK(secp256k1_aggsig_verify_single(vrfy, sig, msg, NULL, &pubkeys[0], 0));
     msg[0]=99;
-    CHECK(!secp256k1_aggsig_verify_single(vrfy, sig, msg, NULL, &pubkeys[0]));
+    CHECK(!secp256k1_aggsig_verify_single(vrfy, sig, msg, NULL, &pubkeys[0],0));
 
     /* Overriding sec nonce */
     memset(sig, 0, sizeof(sig));
-    CHECK(secp256k1_aggsig_sign_single(sign, sig, msg, seckeys[0], seckeys[1], NULL, 0, seed));
-    /*CHECK(secp256k1_aggsig_verify_single(vrfy, sig, msg, NULL, &pubkeys[0]));*/
+    CHECK(secp256k1_aggsig_sign_single(sign, sig, msg, seckeys[0], seckeys[1], NULL, NULL, seed));
+    CHECK(secp256k1_aggsig_verify_single(vrfy, sig, msg, NULL, &pubkeys[0],0));
 
     /* Overriding sec nonce and pub nonce encoded in e */
     memset(sig, 0, sizeof(sig));
-    CHECK(secp256k1_aggsig_sign_single(sign, sig, msg, seckeys[0], seckeys[1], &pubkeys[3], 0, seed));
+    CHECK(secp256k1_aggsig_sign_single(sign, sig, msg, seckeys[0], seckeys[1], &pubkeys[3], NULL, seed));
     /*CHECK(secp256k1_aggsig_verify_single(vrfy, sig, msg, &pubkeys[3], &pubkeys[0]));*/
 
     /* Testing aggsig exchange algorithm for Grin */
     /* ****************************************** */
+
 
     memset(sig, 0, sizeof(sig));
     memset(sig, 0, sizeof(sig2));
     memset(sig, 0, sizeof(combined_sig));
 
     /* Create a couple of nonces */
+		printf("STARTING GRIN EXCHANGE\n");
+    /* Randomise seed to make it more interesting */
+    random_scalar_order_test(&tmp_s);
+    secp256k1_scalar_get_b32(seed, &tmp_s);
     CHECK(secp256k1_aggsig_export_secnonce_single(sign, sec_nonces[0], seed));
+    random_scalar_order_test(&tmp_s);
+    secp256k1_scalar_get_b32(seed, &tmp_s);
     CHECK(secp256k1_aggsig_export_secnonce_single(sign, sec_nonces[1], seed));
 
     for (i = 0; i < 2; i++) {
-        secp256k1_scalar tmp_s;
-        random_scalar_order_test(&tmp_s);
-        secp256k1_scalar_get_b32(sec_nonces[i], &tmp_s);
         CHECK(secp256k1_ec_pubkey_create(ctx, &pub_nonces[i], sec_nonces[i]) == 1);
     }
 
     /* Combine pubnonces */
-    /* pubkey_combiner[0]=&pub_nonces[0];
+    pubkey_combiner[0]=&pub_nonces[0];
     pubkey_combiner[1]=&pub_nonces[1];
-    CHECK(secp256k1_ec_pubkey_combine(ctx, &combiner_sum, pubkey_combiner, 2) == 1);*/
-    CHECK(secp256k1_aggsig_add_pubnonces_single(ctx, &combiner_sum, &negate, &pub_nonces[0], &pub_nonces[1]) == 1);
+    CHECK(secp256k1_ec_pubkey_combine(ctx, &combiner_sum, pubkey_combiner, 2) == 1);
 
     /* Create 2 partial signatures (Sender, Receiver)*/
 		printf("\nSIGN FIRST\n");
-    CHECK(secp256k1_aggsig_sign_single(sign, sig, msg, seckeys[0], sec_nonces[0], &combiner_sum, negate, seed));
+    CHECK(secp256k1_aggsig_sign_single(sign, sig, msg, seckeys[0], sec_nonces[0], &combiner_sum, &combiner_sum, seed));
 
     /* Receiver verifies sender's Sig and signs */
-    /*CHECK(secp256k1_aggsig_verify_single(vrfy, sig, msg, &combiner_sum, &pubkeys[0]));*/
+    CHECK(secp256k1_aggsig_verify_single(vrfy, sig, msg, &combiner_sum, &pubkeys[0], 1));
 		printf("POST_VERIFY FIRST\n\n");
 		printf("\nSIGN SECOND\n");
-    CHECK(secp256k1_aggsig_sign_single(sign, sig2, msg, seckeys[1], sec_nonces[1], &combiner_sum, negate, seed));
+    CHECK(secp256k1_aggsig_sign_single(sign, sig2, msg, seckeys[1], sec_nonces[1], &combiner_sum, &combiner_sum, seed));
 
     /* sender verifies receiver's Sig then creates final combined sig */
-    /*CHECK(secp256k1_aggsig_verify_single(vrfy, sig2, msg, &combiner_sum, &pubkeys[1]));*/
+    CHECK(secp256k1_aggsig_verify_single(vrfy, sig2, msg, &combiner_sum, &pubkeys[1], 1));
 		printf("POST_VERIFY SECOND\n\n");
 
     /* Add 2 sigs and nonces */
-    CHECK(secp256k1_aggsig_add_signatures_single(sign, combined_sig, sig, sig2, &pub_nonces[0], &pub_nonces[1]));
+    CHECK(secp256k1_aggsig_add_signatures_single(sign, combined_sig, sig, sig2, &combiner_sum));
 
     /* Combine pubkeys */
     pubkey_combiner[0]=&pubkeys[0];
     pubkey_combiner[1]=&pubkeys[1];
-    CHECK(secp256k1_ec_pubkey_combine(ctx, &combiner_sum, pubkey_combiner, 2) == 1);
+    CHECK(secp256k1_ec_pubkey_combine(ctx, &combiner_sum_2, pubkey_combiner, 2) == 1);
 
     /* Ensure added sigs verify properly */
-    CHECK(secp256k1_aggsig_verify_single(vrfy, combined_sig, msg, NULL, &combiner_sum));
+    CHECK(secp256k1_aggsig_verify_single(vrfy, combined_sig, msg, &combiner_sum, &combiner_sum_2, 0));
 
     /*** End aggsig for Grin exchange test ***/
 
