@@ -360,7 +360,12 @@ int secp256k1_aggsig_combine_signatures(const secp256k1_context* ctx, secp256k1_
     return 1;
 }
 
-int secp256k1_aggsig_add_signatures_single(const secp256k1_context* ctx, unsigned char *sig64, const unsigned char* sig1_64, const unsigned char* sig2_64, const secp256k1_pubkey* pubnonce_total) {
+int secp256k1_aggsig_add_signatures_single(const secp256k1_context* ctx,
+    unsigned char *sig64,
+    const unsigned char* sig1_64,
+    const unsigned char* sig2_64,
+    const secp256k1_pubkey* pubnonce_total) {
+
     secp256k1_scalar s;
     secp256k1_ge final;
     secp256k1_scalar tmp;
