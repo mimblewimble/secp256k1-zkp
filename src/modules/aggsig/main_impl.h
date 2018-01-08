@@ -37,14 +37,16 @@ static int secp256k1_compute_sighash_single(const secp256k1_context *ctx, secp25
     unsigned char output[32];
     unsigned char buf[33];
     size_t buflen = sizeof(buf);
-
     int overflow;
+
     secp256k1_sha256 hasher;
     secp256k1_sha256_initialize(&hasher);
 
     /* Encode public nonce */
     CHECK(secp256k1_ec_pubkey_serialize(ctx, buf, &buflen, pubkey, SECP256K1_EC_COMPRESSED));
-    secp256k1_sha256_write(&hasher, buf, sizeof(buf));
+
+    /* Remove the first encoding element, as it may differ depending on how we got here */
+    secp256k1_sha256_write(&hasher, buf+1, sizeof(buf-1));
 
     /* Encode message */
     secp256k1_sha256_write(&hasher, msghash32, 32);

@@ -199,7 +199,6 @@ void test_aggsig_api(void) {
 
         /* Receiver verifies sender's Sig and signs */
         CHECK(secp256k1_aggsig_verify_single(vrfy, sig, msg, &combiner_sum, &pubkeys[0], 1));
-
         CHECK(secp256k1_aggsig_sign_single(sign, sig2, msg, seckeys[1], sec_nonces[1], &combiner_sum, &combiner_sum, seed));
         /* sender verifies receiver's Sig then creates final combined sig */
         CHECK(secp256k1_aggsig_verify_single(vrfy, sig2, msg, &combiner_sum, &pubkeys[1], 1));
@@ -212,12 +211,17 @@ void test_aggsig_api(void) {
         pubkey_combiner[1]=&pubkeys[1];
         CHECK(secp256k1_ec_pubkey_combine(ctx, &combiner_sum_2, pubkey_combiner, 2) == 1);
 
-        /* Ensure added sigs verify properly */
+        /* Ensure added sigs verify properly (with and without providing nonce_sum */
         CHECK(secp256k1_aggsig_verify_single(vrfy, combined_sig, msg, &combiner_sum, &combiner_sum_2, 0));
+        CHECK(secp256k1_aggsig_verify_single(vrfy, combined_sig, msg, NULL, &combiner_sum_2, 0));
 
         /* And anything else doesnt' */
         CHECK(!secp256k1_aggsig_verify_single(vrfy, combined_sig, msg, &pub_nonces[0], &combiner_sum_2, 0));
-        CHECK(!secp256k1_aggsig_verify_single(vrfy, combined_sig, msg, &combiner_sum, &pub_nonces[1], 0));
+        CHECK(!secp256k1_aggsig_verify_single(vrfy, combined_sig, msg, NULL, &pub_nonces[1], 0));
+        msg[0]=1;
+        msg[1]=2;
+        msg[2]=3;
+        CHECK(!secp256k1_aggsig_verify_single(vrfy, combined_sig, msg, NULL, &combiner_sum_2, 0));
 
     }
     /*** End aggsig for Grin exchange test ***/
