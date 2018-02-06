@@ -47,7 +47,7 @@
 #else
     #define WNAF_BITS 256
 #endif
-#define WNAF_SIZE(w) ((WNAF_BITS + (w) - 1) / (w))
+#define WNAF_SIZE(bits, w) (((bits) + (w) - 1) / (w))
 
 /** The number of entries a table with precomputed multiples needs to have. */
 #define ECMULT_TABLE_SIZE(w) (1 << ((w)-2))
@@ -609,7 +609,7 @@ static int secp256k1_wnaf_fixed(int *wnaf, const secp256k1_scalar *s, int w) {
         }
         ++pos;
     }
-    VERIFY_CHECK(pos == WNAF_SIZE(w));
+    VERIFY_CHECK(pos == WNAF_SIZE(WNAF_BITS, w));
 
     return skew;
 }
@@ -632,7 +632,7 @@ struct secp256k1_pippenger_state {
  * r += 1*bucket[0] + 3*bucket[1] + 5*bucket[2] + ...
  */
 static int secp256k1_ecmult_pippenger_wnaf(secp256k1_gej *buckets, int bucket_window, struct secp256k1_pippenger_state *state, secp256k1_gej *r, secp256k1_scalar *sc, secp256k1_ge *pt, size_t num) {
-    size_t n_wnaf = WNAF_SIZE(bucket_window+1);
+    size_t n_wnaf = WNAF_SIZE(WNAF_BITS, bucket_window+1);
     size_t np;
     size_t no = 0;
     int i;
@@ -832,7 +832,7 @@ static size_t secp256k1_pippenger_scratch_size(size_t n_points, int bucket_windo
 #else
     size_t entries = n_points + 1;
 #endif
-    size_t entry_size = sizeof(secp256k1_ge) + sizeof(secp256k1_scalar) + sizeof(struct secp256k1_pippenger_point_state) + (WNAF_SIZE(bucket_window+1)+1)*sizeof(int);
+    size_t entry_size = sizeof(secp256k1_ge) + sizeof(secp256k1_scalar) + sizeof(struct secp256k1_pippenger_point_state) + (WNAF_SIZE(WNAF_BITS, bucket_window+1)+1)*sizeof(int);
     return ((1<<bucket_window) * sizeof(secp256k1_gej) + sizeof(struct secp256k1_pippenger_state) + entries * entry_size);
 }
 
@@ -869,7 +869,7 @@ static int secp256k1_ecmult_pippenger_batch(const secp256k1_ecmult_context *ctx,
     scalars = (secp256k1_scalar *) secp256k1_scratch_alloc(scratch, entries * sizeof(*scalars));
     state_space = (struct secp256k1_pippenger_state *) secp256k1_scratch_alloc(scratch, sizeof(*state_space));
     state_space->ps = (struct secp256k1_pippenger_point_state *) secp256k1_scratch_alloc(scratch, entries * sizeof(*state_space->ps));
-    state_space->wnaf_na = (int *) secp256k1_scratch_alloc(scratch, entries*(WNAF_SIZE(bucket_window+1)) * sizeof(int));
+    state_space->wnaf_na = (int *) secp256k1_scratch_alloc(scratch, entries*(WNAF_SIZE(WNAF_BITS, bucket_window+1)) * sizeof(int));
     buckets = (secp256k1_gej *) secp256k1_scratch_alloc(scratch, (1<<bucket_window) * sizeof(*buckets));
 
     if (inp_g_sc != NULL) {
@@ -900,8 +900,8 @@ static int secp256k1_ecmult_pippenger_batch(const secp256k1_ecmult_context *ctx,
     for(i = 0; (size_t)i < idx; i++) {
         secp256k1_scalar_clear(&scalars[i]);
         state_space->ps[i].skew_na = 0;
-        for(j = 0; j < WNAF_SIZE(bucket_window+1); j++) {
-            state_space->wnaf_na[i * WNAF_SIZE(bucket_window+1) + j] = 0;
+        for(j = 0; j < WNAF_SIZE(WNAF_BITS, bucket_window+1); j++) {
+            state_space->wnaf_na[i * WNAF_SIZE(WNAF_BITS, bucket_window+1) + j] = 0;
         }
     }
     for(i = 0; i < 1<<bucket_window; i++) {
@@ -929,7 +929,7 @@ static size_t secp256k1_pippenger_max_points(secp256k1_scratch *scratch) {
         size_t n_points;
         size_t max_points = secp256k1_pippenger_bucket_window_inv(bucket_window);
         ssize_t space_for_points;
-        size_t entry_size = sizeof(secp256k1_ge) + sizeof(secp256k1_scalar) + sizeof(struct secp256k1_pippenger_point_state) + (WNAF_SIZE(bucket_window+1)+1)*sizeof(int);
+        size_t entry_size = sizeof(secp256k1_ge) + sizeof(secp256k1_scalar) + sizeof(struct secp256k1_pippenger_point_state) + (WNAF_SIZE(WNAF_BITS, bucket_window+1)+1)*sizeof(int);
 
 #ifdef USE_ENDOMORPHISM
         entry_size = 2*entry_size;
@@ -952,6 +952,9 @@ static size_t secp256k1_pippenger_max_points(secp256k1_scratch *scratch) {
     }
     return res;
 }
+
+/*typedef int (*secp256k1_ecmult_multi_func)(const secp256k1_ecmult_context*, secp256k1_scratch*, secp256k1_gej*, const secp256k1_scalar*, secp256k1_ecmult_multi_callback cb, void*, size_t);
+static int secp256k1_ecmult_multi_var(const secp256k1_ecmult_context *ctx, secp256k1_scratch *scratch, secp256k1_gej *r, const secp256k1_scalar *inp_g_sc, secp256k1_ecmult_multi_callback cb, void *cbdata, size_t n) {*/
 
 typedef int (*secp256k1_ecmult_multi_func)(const secp256k1_ecmult_context*, secp256k1_scratch*, const secp256k1_callback*, secp256k1_gej*, const secp256k1_scalar*, secp256k1_ecmult_multi_callback cb, void*, size_t);
 static int secp256k1_ecmult_multi_var(const secp256k1_ecmult_context *ctx, secp256k1_scratch *scratch, const secp256k1_callback* error_callback, secp256k1_gej *r, const secp256k1_scalar *inp_g_sc, secp256k1_ecmult_multi_callback cb, void *cbdata, size_t n) {

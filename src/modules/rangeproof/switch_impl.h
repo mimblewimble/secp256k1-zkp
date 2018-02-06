@@ -13,7 +13,7 @@
 SECP256K1_INLINE static void secp256k1_switch_ecmult(secp256k1_gej *rj,
                                                      const secp256k1_scalar *sec,
                                                      const secp256k1_ge* genp) {
-    secp256k1_ecmult_const(rj, genp, sec);
+    secp256k1_ecmult_const(rj, genp, sec, 256);
 }
 
 #endif
