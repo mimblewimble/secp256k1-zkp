@@ -47,6 +47,106 @@ SECP256K1_INLINE static void secp256k1_bulletproof_genrand_pair(secp256k1_rfc697
     } while (overflow || secp256k1_scalar_is_zero(out2));
 }
 
+/* XOR a 64 byte message into 2 32 byte nonces */
+
+SECP256K1_INLINE static void secp256k1_bulletproof_encode_message(unsigned char* out1, unsigned char* out2, const unsigned char* message) {
+    int b;
+    for (b = 0; b < 32; b++) {
+        out1[b] ^= message[b];
+    }
+    for (b = 0; b < 32; b++) {
+        out2[b] ^= message[b+32];
+    }
+}
+
+SECP256K1_INLINE static void secp256k1_bulletproof_decode_message(const unsigned char* in1, const unsigned char* in2, unsigned char* message) {
+    int b;
+    for (b = 0; b < 32; b++) {
+        message[b] ^= in1[b];
+    }
+    for (b = 32; b < 64; b++) {
+        message[b] ^= in2[b-32];
+    }
+}
+
+/* unwind a message from a bulletproof by unwinding known values. Will only work for a single, non-aggregated proof */
+
+SECP256K1_INLINE static void secp256k1_bulletproof_unwind_message(const unsigned char* commit, const unsigned char* nonce, const unsigned char* mu_in, const unsigned char* taux_in, const unsigned char* x_in, const unsigned char* z_in, unsigned char* message) {
+    /* recover 64 bytes of message */
+    secp256k1_rfc6979_hmac_sha256 rng;
+    secp256k1_scalar alpha;
+    secp256k1_scalar tau1;
+    secp256k1_scalar tau2;
+    secp256k1_scalar mu;
+    secp256k1_scalar rho;
+    secp256k1_scalar taux;
+    secp256k1_scalar x;
+    secp256k1_scalar z;
+    secp256k1_scalar xsq;
+    secp256k1_scalar zsq;
+    secp256k1_scalar tmps;
+    secp256k1_scalar blind;
+    secp256k1_scalar alpha_orig;
+    secp256k1_scalar tau1_orig;
+    unsigned char alpha_orig_bytes[32];
+    unsigned char rho_bytes[32];
+    unsigned char tau1_orig_bytes[32];
+    unsigned char tau2_bytes[32];
+    unsigned char rngseed[64];
+    unsigned char alpha_bytes[32];
+    unsigned char tau1_bytes[32];
+    int overflow;
+
+    memcpy(rngseed, nonce, 32);
+    memcpy(rngseed+32, commit, 32);
+    secp256k1_rfc6979_hmac_sha256_initialize(&rng, rngseed, 64);
+    memset(rngseed, 0, 32);
+    secp256k1_bulletproof_genrand_pair(&rng, &alpha_orig, &rho);
+    secp256k1_scalar_get_b32(alpha_orig_bytes, &alpha_orig);
+    secp256k1_scalar_get_b32(rho_bytes, &rho);
+    secp256k1_bulletproof_genrand_pair(&rng, &tau1_orig, &tau2);
+    secp256k1_scalar_get_b32(tau1_orig_bytes, &tau1_orig);
+    secp256k1_scalar_get_b32(tau2_bytes, &tau2);
+
+    /* Calculate the alpha actually used by the rangeproof, which should contain the first 32 bytes of XORed message */
+    /* should be alpha = -mu - Rho*X  */
+    secp256k1_scalar_set_b32(&mu, mu_in, &overflow);
+    secp256k1_scalar_negate(&mu, &mu);
+    secp256k1_scalar_set_b32(&x, x_in, &overflow);
+    secp256k1_scalar_mul(&rho, &rho, &x);
+    secp256k1_scalar_negate(&rho, &rho);
+    secp256k1_scalar_add(&alpha, &mu, &rho);
+    secp256k1_scalar_get_b32(alpha_bytes, &alpha);
+
+    /* calculate the tau1 actually used */
+    /* negate taux */
+    /* tmps = zsq * blind (or nonce) */
+    /* sub tmps from taux */
+    /* tmps = tau2 * xsq */
+    /* sub tmps from taux */
+    /* div taux by x - should result in tau1 */
+    secp256k1_scalar_set_b32(&taux, taux_in, &overflow);
+    secp256k1_scalar_set_b32(&z, z_in, &overflow);
+    secp256k1_scalar_set_b32(&blind, nonce, &overflow);
+    secp256k1_scalar_sqr(&zsq, &z);
+    secp256k1_scalar_sqr(&xsq, &x);
+
+    secp256k1_scalar_negate(&taux, &taux);
+    secp256k1_scalar_mul(&tmps, &zsq, &blind);
+    secp256k1_scalar_negate(&tmps, &tmps);
+    secp256k1_scalar_add(&taux, &taux, &tmps);
+    secp256k1_scalar_mul(&tmps, &xsq, &tau2);
+    secp256k1_scalar_negate(&tmps, &tmps);
+    secp256k1_scalar_add(&taux, &taux, &tmps);
+    secp256k1_scalar_inverse(&x, &x);
+    secp256k1_scalar_mul(&tau1, &taux, &x);
+    secp256k1_scalar_get_b32(tau1_bytes, &tau1);
+
+    memcpy(message, alpha_orig_bytes, 32);
+    memcpy(message+32, tau1_orig_bytes, 32);
+    secp256k1_bulletproof_decode_message(alpha_bytes, tau1_bytes, message);
+}
+
 SECP256K1_INLINE static void secp256k1_bulletproof_serialize_points(unsigned char *out, secp256k1_ge *pt, size_t n) {
     const size_t bitveclen = (n + 7) / 8;
     size_t i;

@@ -43,6 +43,19 @@ SECP256K1_API int secp256k1_bulletproof_rangeproof_verify_single_w_scratch(
     size_t extra_commit_len
 ) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(4) SECP256K1_ARG_NONNULL(6);
 
+SECP256K1_API int secp256k1_bulletproof_rangeproof_unwind_message(
+    const secp256k1_context* ctx,
+    const unsigned char *proof, 
+    size_t plen,
+    const secp256k1_pedersen_commitment* commit,
+    size_t n_commits, 
+    size_t nbits, 
+    const secp256k1_generator* gen,
+    const unsigned char *extra_commit, 
+    size_t extra_commit_len, 
+    const unsigned char* nonce,
+    unsigned char* message
+) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(4) SECP256K1_ARG_NONNULL(6) SECP256K1_ARG_NONNULL(9) SECP256K1_ARG_NONNULL(10);
 
 SECP256K1_API int secp256k1_bulletproof_rangeproof_verify_multi(
     const secp256k1_context* ctx,
@@ -71,7 +84,8 @@ SECP256K1_API int secp256k1_bulletproof_rangeproof_prove(
     size_t nbits,
     const unsigned char* nonce,
     const unsigned char* extra_commit,
-    size_t extra_commit_len
+    size_t extra_commit_len,
+    const unsigned char* message
 ) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(4) SECP256K1_ARG_NONNULL(5) SECP256K1_ARG_NONNULL(6) SECP256K1_ARG_NONNULL(8) SECP256K1_ARG_NONNULL(10);
 
 SECP256K1_API int secp256k1_bulletproof_rangeproof_prove_single_w_scratch(
@@ -84,7 +98,8 @@ SECP256K1_API int secp256k1_bulletproof_rangeproof_prove_single_w_scratch(
     size_t nbits,
     const unsigned char* nonce,
     const unsigned char* extra_commit,
-    size_t extra_commit_len
+    size_t extra_commit_len,
+    const unsigned char* message
 ) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(5) SECP256K1_ARG_NONNULL(6) SECP256K1_ARG_NONNULL(8);
 
 /* circuit stuff */

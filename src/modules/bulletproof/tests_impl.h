@@ -254,12 +254,54 @@ void test_bulletproof_rangeproof(size_t nbits, size_t expected_size, const secp2
 
     genp[0] = genp[1] = secp256k1_ge_const_g2;
 
-    CHECK(secp256k1_bulletproof_rangeproof_prove_impl(ctx, &ctx->ecmult_gen_ctx, &ctx->ecmult_ctx, scratch, proof, &plen[0], nbits, &v, &blind, &commitp, 1, &secp256k1_ge_const_g2, geng, genh, nonce, NULL, 0) == 1);
+    CHECK(secp256k1_bulletproof_rangeproof_prove_impl(ctx, &ctx->ecmult_gen_ctx, &ctx->ecmult_ctx, scratch, proof, &plen[0], nbits, &v, &blind, &commitp, 1, &secp256k1_ge_const_g2, geng, genh, nonce, NULL, 0, NULL) == 1);
     CHECK(plen[0] == expected_size);
     plen[1] = plen[0];
-    CHECK(secp256k1_bulletproof_rangeproof_verify_impl(ctx, &ctx->ecmult_ctx, scratch, proof_ptr, plen, 2, nbits, commitp_ptr, 1, genp, geng, genh, NULL, 0) == 1);
+    CHECK(secp256k1_bulletproof_rangeproof_verify_impl(ctx, &ctx->ecmult_ctx, scratch, proof_ptr, plen, 2, nbits, NULL, NULL, NULL, NULL, commitp_ptr, 1, genp, geng, genh, NULL, 0) == 1);
 
     secp256k1_scratch_destroy(scratch);
+}
+
+void test_bulletproof_rangeproof_message(size_t nbits, size_t expected_size, secp256k1_ge *geng) {
+    secp256k1_scalar blind;
+    unsigned char proof[1024];
+    const unsigned char *blind_ptr[1];
+    size_t plen[1] = { sizeof(proof) };
+    uint64_t v = 123456;
+    secp256k1_ge commitp;
+    secp256k1_gej commitj;
+    secp256k1_generator tmp_gen;
+    unsigned char message[64] = "inserting a 64 byte message into a rangeproof to recover later\n";
+    unsigned char recovered_message[64];
+    unsigned char blind_bytes[32];
+    secp256k1_scalar vs;
+    secp256k1_gej altgen;
+    secp256k1_pedersen_commitment p_commit;
+ 
+    secp256k1_scratch *scratch = secp256k1_scratch_space_create(ctx, 1000000, 10000000);
+
+    if (v >> nbits > 0) {
+        v = 0;
+    }
+
+    secp256k1_gej_set_ge(&altgen, &secp256k1_ge_const_g2);
+    random_scalar_order(&blind);
+    secp256k1_scalar_set_u64(&vs, v);
+    secp256k1_ecmult(&ctx->ecmult_ctx, &commitj, &altgen, &vs, &blind);
+    secp256k1_ge_set_gej(&commitp, &commitj);
+    secp256k1_scalar_get_b32(blind_bytes, &blind);
+    secp256k1_pedersen_commitment_save(&p_commit, &commitp);
+
+    blind_ptr[0] = blind_bytes;
+
+    secp256k1_generator_save(&tmp_gen, geng);
+    CHECK(secp256k1_bulletproof_rangeproof_prove(ctx, scratch, proof, &plen[0], &v, blind_ptr, 1, &tmp_gen, nbits, blind_bytes, NULL, 0, message) == 1);
+    secp256k1_scratch_destroy(scratch);
+    CHECK(plen[0] == expected_size);
+    secp256k1_pedersen_commitment_load(&commitp, &p_commit);
+    CHECK(secp256k1_bulletproof_rangeproof_unwind_message(ctx, proof, plen[0], &p_commit, 1, nbits, &tmp_gen, NULL, 0, blind_bytes, recovered_message) == 1);
+    CHECK(strcmp((const char*) message, (const char *) recovered_message) == 0);
+
 }
 
 void test_bulletproof_rangeproof_aggregate(size_t nbits, size_t n_commits, size_t expected_size, const secp256k1_ge *geng, const secp256k1_ge *genh) {
@@ -296,9 +338,9 @@ void test_bulletproof_rangeproof_aggregate(size_t nbits, size_t n_commits, size_
         secp256k1_bulletproof_update_commit(commit, &commitp[i], &genp);
     }
 
-    CHECK(secp256k1_bulletproof_rangeproof_prove_impl(ctx, &ctx->ecmult_gen_ctx, &ctx->ecmult_ctx, scratch, proof, &plen, nbits, v, blind, commitp, n_commits, &genp, geng, genh, nonce, NULL, 0) == 1);
+    CHECK(secp256k1_bulletproof_rangeproof_prove_impl(ctx, &ctx->ecmult_gen_ctx, &ctx->ecmult_ctx, scratch, proof, &plen, nbits, v, blind, commitp, n_commits, &genp, geng, genh, nonce, NULL, 0, NULL) == 1);
     CHECK(plen == expected_size);
-    CHECK(secp256k1_bulletproof_rangeproof_verify_impl(ctx, &ctx->ecmult_ctx, scratch, &proof_ptr, &plen, 1, nbits, &constptr, n_commits, &genp, geng, genh, NULL, 0) == 1);
+    CHECK(secp256k1_bulletproof_rangeproof_verify_impl(ctx, &ctx->ecmult_ctx, scratch, &proof_ptr, &plen, 1, nbits, NULL, NULL, NULL, NULL, &constptr, n_commits, &genp, geng, genh, NULL, 0) == 1);
 
     secp256k1_scratch_destroy(scratch);
     free(commitp);
@@ -423,6 +465,8 @@ void run_bulletproof_tests(void) {
        secp256k1_generator_load(&genh[i], &tmpgen);
     }
 
+    test_bulletproof_rangeproof(64, 674, geng, genh);
+    test_bulletproof_rangeproof_message(64, 674, geng);
 #if 0
     /* sanity checks */
     test_bulletproof_inner_product(0, geng, genh);
