@@ -186,7 +186,7 @@ static int secp256k1_bulletproof_rangeproof_verify_impl(const secp256k1_context 
             secp256k1_bulletproof_update_commit(commit, &commitp[i][j], genp);
         }
 
-        if (extra_commit != NULL) {
+        if (extra_commit_len > 0) {
             secp256k1_sha256_initialize(&sha256);
             secp256k1_sha256_write(&sha256, commit, 32);
             secp256k1_sha256_write(&sha256, extra_commit, extra_commit_len);
@@ -449,7 +449,7 @@ static int secp256k1_bulletproof_rangeproof_prove_impl(const secp256k1_context *
     for (i = 0; i < n_commits; i++) {
         secp256k1_bulletproof_update_commit(commit, &commitp[i], genp); /* TODO be less stupid about this */
     }
-    if (extra_commit != NULL) {
+    if (extra_commit_len > 0) {
         secp256k1_sha256_initialize(&sha256);
         secp256k1_sha256_write(&sha256, commit, 32);
         secp256k1_sha256_write(&sha256, extra_commit, extra_commit_len);
