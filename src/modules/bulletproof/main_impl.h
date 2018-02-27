@@ -67,6 +67,7 @@ SECP256K1_API int secp256k1_bulletproof_rangeproof_unwind_message(
     unsigned char z[32];
     unsigned char commit_bytes[32] = {0};
     int returnval;
+    secp256k1_sha256 sha256;
     secp256k1_scratch_space *scratch = secp256k1_scratch_space_create(ctx, 1000000, 256 * MAX_WIDTH);
 
     VERIFY_CHECK(ctx != NULL);
@@ -85,6 +86,12 @@ SECP256K1_API int secp256k1_bulletproof_rangeproof_unwind_message(
 
     secp256k1_scratch_space_destroy(scratch);
 
+    if (extra_commit_len > 0) {
+        secp256k1_sha256_initialize(&sha256);
+        secp256k1_sha256_write(&sha256, commit_bytes, 32);
+        secp256k1_sha256_write(&sha256, extra_commit, extra_commit_len);
+        secp256k1_sha256_finalize(&sha256, commit_bytes);
+    }
     /* now it's verified with tau1, mu, x and z recovered, which we need to get the XORed message back */
     secp256k1_bulletproof_unwind_message(commit_bytes, nonce, mu, taux, x, z, message);
 
