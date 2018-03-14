@@ -52,9 +52,10 @@ SECP256K1_API int secp256k1_bulletproof_rangeproof_unwind_message(
     const secp256k1_generator* gen,
     const unsigned char *extra_commit, 
     size_t extra_commit_len, 
+    const unsigned char* blind,
     const unsigned char* nonce,
     unsigned char* message
-) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(4) SECP256K1_ARG_NONNULL(6) SECP256K1_ARG_NONNULL(9);
+) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(4) SECP256K1_ARG_NONNULL(6) SECP256K1_ARG_NONNULL(9) SECP256K1_ARG_NONNULL(10) SECP256K1_ARG_NONNULL(11);
 
 SECP256K1_API int secp256k1_bulletproof_rangeproof_verify_multi(
     const secp256k1_context* ctx,

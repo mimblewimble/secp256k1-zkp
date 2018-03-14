@@ -71,7 +71,7 @@ SECP256K1_INLINE static void secp256k1_bulletproof_decode_message(const unsigned
 
 /* unwind a message from a bulletproof by unwinding known values. Will only work for a single, non-aggregated proof */
 
-SECP256K1_INLINE static void secp256k1_bulletproof_unwind_message(const unsigned char* commit, const unsigned char* nonce, const unsigned char* mu_in, const unsigned char* taux_in, const unsigned char* x_in, const unsigned char* z_in, unsigned char* message) {
+SECP256K1_INLINE static void secp256k1_bulletproof_unwind_message(const unsigned char* commit, const unsigned char* blind_in, const unsigned char* nonce, const unsigned char* mu_in, const unsigned char* taux_in, const unsigned char* x_in, const unsigned char* z_in, unsigned char* message) {
     /* recover 64 bytes of message */
     secp256k1_rfc6979_hmac_sha256 rng;
     secp256k1_scalar alpha;
@@ -120,14 +120,14 @@ SECP256K1_INLINE static void secp256k1_bulletproof_unwind_message(const unsigned
 
     /* calculate the tau1 actually used */
     /* negate taux */
-    /* tmps = zsq * blind (or nonce) */
+    /* tmps = zsq * blind */
     /* sub tmps from taux */
     /* tmps = tau2 * xsq */
     /* sub tmps from taux */
     /* div taux by x - should result in tau1 */
     secp256k1_scalar_set_b32(&taux, taux_in, &overflow);
     secp256k1_scalar_set_b32(&z, z_in, &overflow);
-    secp256k1_scalar_set_b32(&blind, nonce, &overflow);
+    secp256k1_scalar_set_b32(&blind, blind_in, &overflow);
     secp256k1_scalar_sqr(&zsq, &z);
     secp256k1_scalar_sqr(&xsq, &x);
 

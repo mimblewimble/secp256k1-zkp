@@ -54,6 +54,7 @@ SECP256K1_API int secp256k1_bulletproof_rangeproof_unwind_message(
     const secp256k1_generator* gen,
     const unsigned char *extra_commit, 
     size_t extra_commit_len, 
+    const unsigned char* blind,
     const unsigned char* nonce,
     unsigned char* message) {
 
@@ -93,7 +94,7 @@ SECP256K1_API int secp256k1_bulletproof_rangeproof_unwind_message(
         secp256k1_sha256_finalize(&sha256, commit_bytes);
     }
     /* now it's verified with tau1, mu, x and z recovered, which we need to get the XORed message back */
-    secp256k1_bulletproof_unwind_message(commit_bytes, nonce, mu, taux, x, z, message);
+    secp256k1_bulletproof_unwind_message(commit_bytes, blind, nonce, mu, taux, x, z, message);
 
     return returnval;
 }
