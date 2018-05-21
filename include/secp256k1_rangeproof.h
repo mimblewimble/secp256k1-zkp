@@ -310,6 +310,22 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_rangeproof_info(
   size_t plen
 ) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(4) SECP256K1_ARG_NONNULL(5);
 
+/** Converts a pedersent commit to a pubkey
++ *
++ * Returns 1: Public key succesfully computed.
++ *         0: Error. 
++*
++ * In:                 ctx: pointer to a context object
++ *                   commit: pointer to a single commit
++ * Out:              pubkey: resulting pubkey
++ *
++ */
+SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_pedersen_commitment_to_pubkey(
+  const secp256k1_context* ctx,
+  secp256k1_pubkey* pubkey,
+  const secp256k1_pedersen_commitment* commit
+);
+
 # ifdef __cplusplus
 }
 # endif

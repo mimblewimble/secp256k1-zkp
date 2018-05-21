@@ -299,7 +299,7 @@ void test_bulletproof_rangeproof_message(size_t nbits, size_t expected_size, sec
     secp256k1_scratch_destroy(scratch);
     CHECK(plen[0] == expected_size);
     secp256k1_pedersen_commitment_load(&commitp, &p_commit);
-    CHECK(secp256k1_bulletproof_rangeproof_unwind_message(ctx, proof, plen[0], &p_commit, nbits, &tmp_gen, NULL, 0, blind_bytes, recovered_message) == 1);
+    CHECK(secp256k1_bulletproof_rangeproof_unwind_message(ctx, proof, plen[0], &p_commit, nbits, &tmp_gen, NULL, 0, blind_bytes, blind_bytes, recovered_message) == 1);
     CHECK(strcmp((const char*) message, (const char *) recovered_message) == 0);
 
 }
