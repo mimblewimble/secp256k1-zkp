@@ -171,10 +171,10 @@ SECP256K1_API int secp256k1_aggsig_combine_signatures(
 SECP256K1_API int secp256k1_aggsig_add_signatures_single(
     const secp256k1_context* ctx,
     unsigned char *sig64,
-    const unsigned char* sig1_64,
-    const unsigned char* sig2_64,
+    const unsigned char** sigs,
+    size_t num_sigs,
     const secp256k1_pubkey* pubnonce_total
-) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(4) SECP256K1_ARG_NONNULL(5) SECP256K1_WARN_UNUSED_RESULT;
+) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(4) SECP256K1_ARG_NONNULL(5) SECP256K1_WARN_UNUSED_RESULT;
 
 
 /** Verify a single-signer signature, without a stored context 

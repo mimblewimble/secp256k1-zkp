@@ -24,6 +24,7 @@ void test_aggsig_api(void) {
     unsigned char seed[32] = { 1, 2, 3, 4, 0 };
     unsigned char sig[64];
     unsigned char sig2[64];
+    unsigned char* sigs[2];
     unsigned char combined_sig[64];
     unsigned char sec_nonces[5][32];
     secp256k1_pubkey pub_nonces[5];
@@ -203,8 +204,10 @@ void test_aggsig_api(void) {
         /* sender verifies receiver's Sig then creates final combined sig */
         CHECK(secp256k1_aggsig_verify_single(vrfy, sig2, msg, &combiner_sum, &pubkeys[1], 1));
 
+        sigs[0] = sig;
+        sigs[1] = sig2;
         /* Add 2 sigs and nonces */
-        CHECK(secp256k1_aggsig_add_signatures_single(sign, combined_sig, sig, sig2, &combiner_sum));
+        CHECK(secp256k1_aggsig_add_signatures_single(sign, combined_sig, (const unsigned char **) sigs, 2, &combiner_sum));
 
         /* Combine pubkeys */
         pubkey_combiner[0]=&pubkeys[0];
