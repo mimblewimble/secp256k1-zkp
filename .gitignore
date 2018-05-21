@@ -26,6 +26,7 @@ config.status
 libtool
 .deps/
 .dirstamp
+.idea/
 *.lo
 *.o
 *~
