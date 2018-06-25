@@ -154,6 +154,10 @@ AC_ARG_ENABLE(module_bulletproof,
     [enable_module_bulletproof=$enableval],
     [enable_module_bulletproof=no])
 
+AC_ARG_ENABLE(module_aggsig,
+    AS_HELP_STRING([--enable-module-aggsig],[enable Grin aggsig modules]),
+    [enable_module_aggsig=$enableval],
+    [enable_module_aggsig=no])
 
 AC_ARG_ENABLE(module_whitelist,
     AS_HELP_STRING([--enable-module-whitelist],[enable key whitelisting module (default is no)]),
@@ -494,6 +498,10 @@ if test x"$enable_module_bulletproof" = x"yes"; then
   AC_DEFINE(ENABLE_MODULE_BULLETPROOF, 1, [Define this symbol to enable the Pedersen / zero knowledge bulletproof module])
 fi
 
+if test x"$enable_module_aggsig" = x"yes"; then
+  AC_DEFINE(ENABLE_MODULE_AGGSIG, 1, [Define this symbol to enable the Grin Aggsig module])
+fi
+
 if test x"$enable_module_whitelist" = x"yes"; then
   AC_DEFINE(ENABLE_MODULE_WHITELIST, 1, [Define this symbol to enable the key whitelisting module])
 fi
@@ -529,6 +537,7 @@ if test x"$enable_experimental" = x"yes"; then
   AC_MSG_NOTICE([Building Pedersen commitment module: $enable_module_commitment])
   AC_MSG_NOTICE([Building range proof module: $enable_module_rangeproof])
   AC_MSG_NOTICE([Building bulletproof module: $enable_module_bulletproof])
+  AC_MSG_NOTICE([Building aggsig module: $enable_module_aggsig])
   AC_MSG_NOTICE([Building key whitelisting module: $enable_module_whitelist])
   AC_MSG_NOTICE([Building surjection proof module: $enable_module_surjectionproof])
   AC_MSG_NOTICE([******])
@@ -578,6 +587,9 @@ else
   if test x"$enable_module_bulletproof" = x"yes"; then
     AC_MSG_ERROR([Bulletproof module is experimental. Use --enable-experimental to allow.])
   fi
+  if test x"$enable_module_agggsig" = x"yes"; then
+    AC_MSG_ERROR([Aggsig module is experimental. Use --enable-experimental to allow.])
+  fi
   if test x"$enable_module_whitelist" = x"yes"; then
     AC_MSG_ERROR([Key whitelisting module is experimental. Use --enable-experimental to allow.])
   fi
@@ -604,6 +616,7 @@ AM_CONDITIONAL([ENABLE_MODULE_GENERATOR], [test x"$enable_module_generator" = x"
 AM_CONDITIONAL([ENABLE_MODULE_COMMITMENT], [test x"$enable_module_commitment" = x"yes"])
 AM_CONDITIONAL([ENABLE_MODULE_RANGEPROOF], [test x"$enable_module_rangeproof" = x"yes"])
 AM_CONDITIONAL([ENABLE_MODULE_BULLETPROOF], [test x"$enable_module_bulletproof" = x"yes"])
+AM_CONDITIONAL([ENABLE_MODULE_AGGSIG], [test x"$enable_module_aggsig" = x"yes"])
 AM_CONDITIONAL([ENABLE_MODULE_WHITELIST], [test x"$enable_module_whitelist" = x"yes"])
 AM_CONDITIONAL([USE_JNI], [test x"$use_jni" == x"yes"])
 AM_CONDITIONAL([USE_EXTERNAL_ASM], [test x"$use_external_asm" = x"yes"])
@@ -614,5 +627,14 @@ dnl make sure nothing new is exported so that we don't break the cache
 PKGCONFIG_PATH_TEMP="$PKG_CONFIG_PATH"
 unset PKG_CONFIG_PATH
 PKG_CONFIG_PATH="$PKGCONFIG_PATH_TEMP"
+
+dnl build modules Grin needs by default
+
+AC_DEFINE(ENABLE_MODULE_ECDH, 1)
+AC_DEFINE(ENABLE_MODULE_GENERATOR , 1)
+AC_DEFINE(ENABLE_MODULE_RECOVERY , 1)
+AC_DEFINE(ENABLE_MODULE_RANGEPROOF , 1)
+AC_DEFINE(ENABLE_MODULE_BULLETPROOF , 1)
+AC_DEFINE(ENABLE_MODULE_AGGSIG , 1)
 
 AC_OUTPUT
