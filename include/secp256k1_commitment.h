@@ -94,6 +94,24 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_pedersen_blind_sum(
   size_t npositive
 ) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3);
 
+/** Computes the sum of multiple positive and negative pedersen commitments
+ * Returns 1: sum successfully computed.
+ * In:     ctx:        pointer to a context object, initialized for Pedersen commitment (cannot be NULL)
+ *         commits:    pointer to array of pointers to the commitments. (cannot be NULL if pcnt is non-zero)
+ *         pcnt:       number of commitments pointed to by commits.
+ *         ncommits:   pointer to array of pointers to the negative commitments. (cannot be NULL if ncnt is non-zero)
+ *         ncnt:       number of commitments pointed to by ncommits.
+ *  Out:   commit_out: pointer to the commitment (cannot be NULL)
+ */
+SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_pedersen_commit_sum(
+  const secp256k1_context* ctx,
+  secp256k1_pedersen_commitment *commit_out,
+  const secp256k1_pedersen_commitment * const* commits,
+  size_t pcnt,
+  const secp256k1_pedersen_commitment * const* ncommits,
+  size_t ncnt
+) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(5);
+
 /** Verify a tally of Pedersen commitments
  * Returns 1: commitments successfully sum to zero.
  *         0: Commitments do not sum to zero or other error.
@@ -155,6 +173,23 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_pedersen_blind_generato
   unsigned char* const* blinding_factor,
   size_t n_total,
   size_t n_inputs
+);
+
+/** Converts a pedersent commit to a pubkey
+ *
+ * Returns 1: Public key succesfully computed.
+ *         0: Error.
+*
+ * In:                 ctx: pointer to a context object
+ *                   commit: pointer to a single commit
+ * Out:              pubkey: resulting pubkey
+ *
+ */
+
+SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_pedersen_commitment_to_pubkey(
+  const secp256k1_context* ctx,
+  secp256k1_pubkey* pubkey,
+  const secp256k1_pedersen_commitment* commit
 );
 
 # ifdef __cplusplus

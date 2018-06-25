@@ -77,6 +77,24 @@ int secp256k1_pedersen_commit(const secp256k1_context* ctx, secp256k1_pedersen_c
     return ret;
 }
 
+int secp256k1_pedersen_commitment_to_pubkey(const secp256k1_context* ctx, secp256k1_pubkey* pubkey, const secp256k1_pedersen_commitment* commit) {
+    secp256k1_ge Q;
+    secp256k1_fe fe;
+    VERIFY_CHECK(ctx != NULL);
+    ARG_CHECK(pubkey != NULL);
+    memset(pubkey, 0, sizeof(*pubkey));
+    ARG_CHECK(commit != NULL);
+
+    secp256k1_fe_set_b32(&fe, &commit->data[1]);
+    secp256k1_ge_set_xquad(&Q, &fe);
+    if (commit->data[0] & 1) {
+        secp256k1_ge_neg(&Q, &Q);
+    }
+    secp256k1_pubkey_save(pubkey, &Q);
+    secp256k1_ge_clear(&Q);
+    return 1;
+}
+
 /** Takes a list of n pointers to 32 byte blinding values, the first negs of which are treated with positive sign and the rest
  *  negative, then calculates an additional blinding value that adds to zero.
  */
@@ -107,23 +125,54 @@ int secp256k1_pedersen_blind_sum(const secp256k1_context* ctx, unsigned char *bl
     return 1;
 }
 
+/* Takes two list of 33-byte commitments and sums the first set, subtracts the second and returns the resulting commitment. */
+int secp256k1_pedersen_commit_sum(const secp256k1_context* ctx, secp256k1_pedersen_commitment *commit_out,
+ const secp256k1_pedersen_commitment * const* commits, size_t pcnt, const secp256k1_pedersen_commitment * const* ncommits, size_t ncnt) {
+    secp256k1_gej accj;
+    secp256k1_ge add;
+    size_t i;
+    int ret = 0;
+    VERIFY_CHECK(ctx != NULL);
+    ARG_CHECK(!pcnt || (commits != NULL));
+    ARG_CHECK(!ncnt || (ncommits != NULL));
+    ARG_CHECK(commit_out != NULL);
+    (void) ctx;
+    secp256k1_gej_set_infinity(&accj);
+    for (i = 0; i < ncnt; i++) {
+        secp256k1_pedersen_commitment_load(&add, ncommits[i]);
+        secp256k1_gej_add_ge_var(&accj, &accj, &add, NULL);
+    }
+    secp256k1_gej_neg(&accj, &accj);
+    for (i = 0; i < pcnt; i++) {
+        secp256k1_pedersen_commitment_load(&add, commits[i]);
+        secp256k1_gej_add_ge_var(&accj, &accj, &add, NULL);
+    }
+    if (!secp256k1_gej_is_infinity(&accj)) {
+        secp256k1_ge acc;
+        secp256k1_ge_set_gej(&acc, &accj);
+        secp256k1_pedersen_commitment_save(commit_out, &acc);
+        ret = 1;
+    }
+    return ret;
+}
+
 /* Takes two lists of commitments and sums the first set and subtracts the second and verifies that they sum to excess. */
-int secp256k1_pedersen_verify_tally(const secp256k1_context* ctx, const secp256k1_pedersen_commitment * const* pos, size_t n_pos, const secp256k1_pedersen_commitment * const* neg, size_t n_neg) {
+int secp256k1_pedersen_verify_tally(const secp256k1_context* ctx, const secp256k1_pedersen_commitment * const* commits, size_t pcnt, const secp256k1_pedersen_commitment * const* ncommits, size_t ncnt) {
     secp256k1_gej accj;
     secp256k1_ge add;
     size_t i;
     VERIFY_CHECK(ctx != NULL);
-    ARG_CHECK(!n_pos || (pos != NULL));
-    ARG_CHECK(!n_neg || (neg != NULL));
+    ARG_CHECK(!pcnt || (commits != NULL));
+    ARG_CHECK(!ncnt || (ncommits != NULL));
     (void) ctx;
     secp256k1_gej_set_infinity(&accj);
-    for (i = 0; i < n_pos; i++) {
-        secp256k1_pedersen_commitment_load(&add, neg[i]);
+    for (i = 0; i < ncnt; i++) {
+        secp256k1_pedersen_commitment_load(&add, ncommits[i]);
         secp256k1_gej_add_ge_var(&accj, &accj, &add, NULL);
     }
     secp256k1_gej_neg(&accj, &accj);
-    for (i = 0; i < n_neg; i++) {
-        secp256k1_pedersen_commitment_load(&add, pos[i]);
+    for (i = 0; i < pcnt; i++) {
+        secp256k1_pedersen_commitment_load(&add, commits[i]);
         secp256k1_gej_add_ge_var(&accj, &accj, &add, NULL);
     }
     return secp256k1_gej_is_infinity(&accj);
