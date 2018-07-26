@@ -244,7 +244,7 @@ static int secp256k1_bulletproof_innerproduct_vfy_ecmult_callback(secp256k1_scal
              * that has exactly one 0-bit, i.e. which is a product of all `x_i`s and one `x_k^-1`. By
              * multiplying that by the special value `prod_{i=1}^n x_i^-1` we obtain simply `x_k^-2`.
              * We expect the caller to give us this special value in `ctx->proof[i].xsqinv_mask`. */
-            if (idx < ctx->vec_len / grouping && POPCOUNT(idx) == ctx->lg_vec_len - 1) {
+            if (idx < ctx->vec_len / grouping && POPCOUNT(idx) + (unsigned long)1 == ctx->lg_vec_len) {
                 const size_t xsqinv_idx = CTZ(~idx);
                 secp256k1_scalar_mul(&ctx->proof[i].xsqinv[xsqinv_idx], &ctx->proof[i].xcache[cache_idx], &ctx->proof[i].xsqinv_mask);
             }
