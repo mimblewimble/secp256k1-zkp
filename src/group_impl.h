@@ -200,7 +200,7 @@ static void secp256k1_gej_set_infinity(secp256k1_gej *r) {
     secp256k1_fe_clear(&r->z);
 }
 
-static void secp256k1_ge_set_infinity(secp256k1_ge *r) {
+static void __attribute__((unused)) secp256k1_ge_set_infinity(secp256k1_ge *r) {
     r->infinity = 1;
     secp256k1_fe_clear(&r->x);
     secp256k1_fe_clear(&r->y);
@@ -270,7 +270,7 @@ static int secp256k1_gej_is_infinity(const secp256k1_gej *a) {
     return a->infinity;
 }
 
-static int secp256k1_gej_is_valid_var(const secp256k1_gej *a) {
+static int __attribute__((unused)) secp256k1_gej_is_valid_var(const secp256k1_gej *a) {
     secp256k1_fe y2, x3, z2, z6;
     if (a->infinity) {
         return 0;
