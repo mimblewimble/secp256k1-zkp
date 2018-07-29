@@ -36,7 +36,7 @@ static void test_bulletproof_api(void) {
     uint64_t min_value[4] = { 1000, 4567, 0, 5000 } ;
     const uint64_t *mv_ptr = min_value;
     unsigned char rewind_blind[32];
-    size_t rewind_v;
+    uint64_t rewind_v;
 
     int32_t ecount = 0;
 
