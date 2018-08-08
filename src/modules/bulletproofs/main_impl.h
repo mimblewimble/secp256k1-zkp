@@ -234,4 +234,56 @@ int secp256k1_bulletproof_rangeproof_prove(const secp256k1_context* ctx, secp256
     return ret;
 }
 
+int secp256k1_bulletproof_rangeproof_1(const secp256k1_context* ctx, secp256k1_scratch_space *scratch, const secp256k1_bulletproof_generators *gens, secp256k1_pubkey *t_one, secp256k1_pubkey *t_two, const uint64_t *value, const uint64_t *min_value, const unsigned char* const* blind, size_t n_commits, const secp256k1_generator *value_gen, size_t nbits, const unsigned char *nonce, const unsigned char *extra_commit, size_t extra_commit_len) {
+    int ret;
+    secp256k1_ge *commitp;
+    secp256k1_scalar *blinds;
+    secp256k1_ge value_genp;
+    size_t i;
+
+    VERIFY_CHECK(ctx != NULL);
+    ARG_CHECK(scratch != NULL);
+    ARG_CHECK(gens != NULL);
+    ARG_CHECK(gens->n >= 2 * nbits * n_commits);
+    ARG_CHECK(t_one != NULL);
+    ARG_CHECK(t_two != NULL);
+    ARG_CHECK(value != NULL);
+    ARG_CHECK(blind != NULL);
+    ARG_CHECK(value_gen != NULL);
+    ARG_CHECK(nonce != NULL);
+    ARG_CHECK(n_commits > 0 && n_commits);
+    ARG_CHECK(nbits <= 64);
+    if (nbits < 64) {
+        for (i = 0; i < n_commits; i++) {
+            ARG_CHECK(value[i] < (1ull << nbits));
+            ARG_CHECK(blind[i] != NULL);
+        }
+    }
+    ARG_CHECK(extra_commit != NULL || extra_commit_len == 0);
+    ARG_CHECK(secp256k1_ecmult_context_is_built(&ctx->ecmult_ctx));
+    ARG_CHECK(secp256k1_ecmult_gen_context_is_built(&ctx->ecmult_gen_ctx));
+
+    if (!secp256k1_scratch_allocate_frame(scratch, n_commits * (sizeof(*commitp) + sizeof(*blinds)), 2)) {
+        return 0;
+    }
+    commitp = (secp256k1_ge *)secp256k1_scratch_alloc(scratch, n_commits * sizeof(*commitp));
+    blinds = (secp256k1_scalar *)secp256k1_scratch_alloc(scratch, n_commits * sizeof(*blinds));
+
+    secp256k1_generator_load(&value_genp, value_gen);
+    for (i = 0; i < n_commits; i++) {
+        int overflow;
+        secp256k1_gej commitj;
+        secp256k1_scalar_set_b32(&blinds[i], blind[i], &overflow);
+        if (overflow || secp256k1_scalar_is_zero(&blinds[i])) {
+            return 0;
+        }
+        secp256k1_pedersen_ecmult(&commitj, &blinds[i], value[i], &value_genp, &gens->blinding_gen[0]);
+        secp256k1_ge_set_gej(&commitp[i], &commitj);
+    }
+
+    ret = secp256k1_bulletproof_rangeproof_1_impl(&ctx->ecmult_ctx, scratch, t_one, t_two, nbits, value, min_value, blinds, commitp, n_commits, &value_genp, gens, nonce, extra_commit, extra_commit_len);
+    secp256k1_scratch_deallocate_frame(scratch);
+    return ret;
+}
+
 #endif

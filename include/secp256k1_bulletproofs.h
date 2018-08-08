@@ -169,6 +169,23 @@ SECP256K1_WARN_UNUSED_RESULT SECP256K1_API int secp256k1_bulletproof_rangeproof_
     size_t extra_commit_len
 ) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(4) SECP256K1_ARG_NONNULL(5) SECP256K1_ARG_NONNULL(6) SECP256K1_ARG_NONNULL(8) SECP256K1_ARG_NONNULL(10) SECP256K1_ARG_NONNULL(12);
 
+SECP256K1_WARN_UNUSED_RESULT SECP256K1_API int secp256k1_bulletproof_rangeproof_1(
+    const secp256k1_context* ctx,
+    secp256k1_scratch_space* scratch,
+    const secp256k1_bulletproof_generators *gens,
+    secp256k1_pubkey *t_one,
+    secp256k1_pubkey *t_two,
+    const uint64_t *value,
+    const uint64_t *min_value,
+    const unsigned char* const* blind,
+    size_t n_commits,
+    const secp256k1_generator* value_gen,
+    size_t nbits,
+    const unsigned char* nonce,
+    const unsigned char* extra_commit,
+    size_t extra_commit_len
+) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(4) SECP256K1_ARG_NONNULL(5) SECP256K1_ARG_NONNULL(6) SECP256K1_ARG_NONNULL(8) SECP256K1_ARG_NONNULL(10) SECP256K1_ARG_NONNULL(12);
+
 # ifdef __cplusplus
 }
 # endif
