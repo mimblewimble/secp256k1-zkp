@@ -234,17 +234,13 @@ int secp256k1_bulletproof_rangeproof_prove(const secp256k1_context* ctx, secp256
     return ret;
 }
 
-int secp256k1_bulletproof_rangeproof_1(const secp256k1_bulletproof_generators *gens, secp256k1_pubkey *t_one, secp256k1_pubkey *t_two, const unsigned char *nonce) {
-    //static void secp256k1_bulletproof_rangeproof_1_impl(secp256k1_pubkey *t_one, secp256k1_pubkey *t_two, const secp256k1_bulletproof_generators *gens, const unsigned char *nonce) {
-    int ret;
-
+void secp256k1_bulletproof_rangeproof_1(const secp256k1_bulletproof_generators *gens, secp256k1_pubkey *t_one, secp256k1_pubkey *t_two, const unsigned char *nonce) {
     ARG_CHECK(gens != NULL);
     ARG_CHECK(t_one != NULL);
     ARG_CHECK(t_two != NULL);
     ARG_CHECK(nonce != NULL);
 
-    ret = secp256k1_bulletproof_rangeproof_1_impl(t_one, t_two, gens, nonce);
-    return ret;
+    secp256k1_bulletproof_rangeproof_1_impl(t_one, t_two, gens, nonce);
 }
 
 #endif
