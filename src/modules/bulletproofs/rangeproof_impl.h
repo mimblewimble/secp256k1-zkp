@@ -686,9 +686,6 @@ static int secp256k1_bulletproof_rangeproof_1_impl(const secp256k1_ecmult_contex
             return 0;
         }
     }
-    if (*plen < 128 + 64 + 1) { /* inner product argument will check and assign plen */
-        return 0;
-    }
 
     secp256k1_scalar_clear(&zero);
 
