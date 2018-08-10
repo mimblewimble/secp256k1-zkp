@@ -46,7 +46,7 @@ static int secp256k1_compute_sighash_single(const secp256k1_context *ctx, secp25
     CHECK(secp256k1_ec_pubkey_serialize(ctx, buf, &buflen, pubkey, SECP256K1_EC_COMPRESSED));
 
     /* Remove the first encoding element, as it may differ depending on how we got here */
-    secp256k1_sha256_write(&hasher, buf+1, sizeof(buf-1));
+    secp256k1_sha256_write(&hasher, buf+1, 32);
 
     /* Encode message */
     secp256k1_sha256_write(&hasher, msghash32, 32);
