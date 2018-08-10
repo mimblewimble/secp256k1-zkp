@@ -462,7 +462,7 @@ int secp256k1_aggsig_verify(const secp256k1_context* ctx, secp256k1_scratch_spac
     secp256k1_compute_prehash(ctx, cbdata.prehash, pubkeys, n_pubkeys, &r_x, msg32);
 
     /* Compute sum sG - e_i*P_i, which should be R */
-    if (!secp256k1_ecmult_multi_var(&ctx->ecmult_ctx, scratch, &ctx->error_callback, &pk_sum, &g_sc, secp256k1_aggsig_verify_callback, &cbdata, n_pubkeys)) {
+    if (!secp256k1_ecmult_multi_var(&ctx->ecmult_ctx, scratch, &pk_sum, &g_sc, secp256k1_aggsig_verify_callback, &cbdata, n_pubkeys)) {
         return 0;
     }
 
@@ -478,7 +478,7 @@ int secp256k1_aggsig_build_scratch_and_verify(const secp256k1_context* ctx,
                                               const secp256k1_pubkey *pubkeys, 
                                               size_t n_pubkeys) {
     /* just going to inefficiently allocate every time */
-    secp256k1_scratch_space *scratch = secp256k1_scratch_space_create(ctx, 1024, 4096);
+    secp256k1_scratch_space *scratch = secp256k1_scratch_space_create(ctx, 1024*4096);
     int returnval=secp256k1_aggsig_verify(ctx, scratch, sig64, msg32, pubkeys, n_pubkeys);
     secp256k1_scratch_space_destroy(scratch);
     return returnval;
@@ -543,9 +543,9 @@ int secp256k1_aggsig_verify_single(
     cbdata.pubkeys = pubkey;
     cbdata.single_hash = sighash;
 
-    scratch = secp256k1_scratch_space_create(ctx, 1024, 4096);
+    scratch = secp256k1_scratch_space_create(ctx, 1024*4096);
     /* Compute sG - eP, which should be R */
-    if (!secp256k1_ecmult_multi_var(&ctx->ecmult_ctx, scratch, &ctx->error_callback, &pk_sum, &g_sc, secp256k1_aggsig_verify_callback_single, &cbdata, 1)) {
+    if (!secp256k1_ecmult_multi_var(&ctx->ecmult_ctx, scratch, &pk_sum, &g_sc, secp256k1_aggsig_verify_callback_single, &cbdata, 1)) {
         return 0;
     }
 

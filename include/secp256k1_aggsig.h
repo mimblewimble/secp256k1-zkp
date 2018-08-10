@@ -188,7 +188,7 @@ SECP256K1_API int secp256k1_aggsig_add_signatures_single(
  *           is_partial: whether to ignore the jacobi symbol of the combined R, set this to 1
  *               to verify partial signatures that may have had their secret nonces negated
  */
-int secp256k1_aggsig_verify_single(
+SECP256K1_API int secp256k1_aggsig_verify_single(
     const secp256k1_context* ctx,
     const unsigned char *sig64,
     const unsigned char *msg32,

@@ -186,12 +186,20 @@ if ENABLE_MODULE_GENERATOR
 include src/modules/generator/Makefile.am.include
 endif
 
+if ENABLE_MODULE_COMMITMENT
+include src/modules/commitment/Makefile.am.include
+endif
+
 if ENABLE_MODULE_RANGEPROOF
 include src/modules/rangeproof/Makefile.am.include
 endif
 
 if ENABLE_MODULE_BULLETPROOF
-include src/modules/bulletproof/Makefile.am.include
+include src/modules/bulletproofs/Makefile.am.include
+endif
+
+if ENABLE_MODULE_AGGSIG
+include src/modules/aggsig/Makefile.am.include
 endif
 
 if ENABLE_MODULE_WHITELIST
@@ -200,8 +208,4 @@ endif
 
 if ENABLE_MODULE_SURJECTIONPROOF
 include src/modules/surjection/Makefile.am.include
-endif
-
-if ENABLE_MODULE_AGGSIG
-include src/modules/aggsig/Makefile.am.include
 endif
