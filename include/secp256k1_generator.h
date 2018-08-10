@@ -24,6 +24,12 @@ typedef struct {
     unsigned char data[33];
 } secp256k1_generator;
 
+/** Standard secp256k1 generator G */
+extern const secp256k1_generator secp256k1_generator_const_g;
+
+/** Alternate secp256k1 generator from Elements Alpha */
+extern const secp256k1_generator secp256k1_generator_const_h;
+
 /** Parse a 33-byte generator byte sequence into a generator object.
  *
  *  Returns: 1 if input contains a valid generator.
@@ -58,9 +64,9 @@ SECP256K1_API int secp256k1_generator_serialize(
  *  Out:  gen:     a generator object
  *  In:   seed32:  a 32-byte seed
  *
- *  If succesful, a valid generator will be placed in gen. The produced
+ *  If successful a valid generator will be placed in gen. The produced
  *  generators are distributed uniformly over the curve, and will not have a
- *  known dicrete logarithm with respect to any other generator produced,
+ *  known discrete logarithm with respect to any other generator produced,
  *  or to the base generator G.
  */
 SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_generator_generate(

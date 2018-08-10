@@ -12,8 +12,6 @@
 #include "scalar.h"
 #include "scratch.h"
 
-#define SECP256K1_ECMULT_MULTI_MAX_N	32
-
 typedef struct {
     /* For accelerating the computation of a*P + b*G: */
     secp256k1_ge_storage (*pre_g)[];    /* odd multiples of the generator */
@@ -37,12 +35,13 @@ typedef int (secp256k1_ecmult_multi_callback)(secp256k1_scalar *sc, secp256k1_ge
 /**
  * Multi-multiply: R = inp_g_sc * G + sum_i ni * Ai.
  * Chooses the right algorithm for a given number of points and scratch space
- * size. If the points do not fit in the scratch space the algorithm is
- * repeatedly run with batches of points.
+ * size. Resets and overwrites the given scratch space. If the points do not
+ * fit in the scratch space the algorithm is repeatedly run with batches of
+ * points.
  * Returns: 1 on success (including when inp_g_sc is NULL and n is 0)
  *          0 if there is not enough scratch space for a single point or
  *          callback returns 0
  */
-static int secp256k1_ecmult_multi_var(const secp256k1_ecmult_context *ctx, secp256k1_scratch *scratch, const secp256k1_callback* error_callback, secp256k1_gej *r, const secp256k1_scalar *inp_g_sc, secp256k1_ecmult_multi_callback cb, void *cbdata, size_t n);
+static int secp256k1_ecmult_multi_var(const secp256k1_ecmult_context *ctx, secp256k1_scratch *scratch, secp256k1_gej *r, const secp256k1_scalar *inp_g_sc, secp256k1_ecmult_multi_callback cb, void *cbdata, size_t n);
 
 #endif /* SECP256K1_ECMULT_H */

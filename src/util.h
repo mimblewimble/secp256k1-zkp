@@ -76,6 +76,14 @@ static SECP256K1_INLINE void *checked_malloc(const secp256k1_callback* cb, size_
     return ret;
 }
 
+static SECP256K1_INLINE void *checked_realloc(const secp256k1_callback* cb, void *ptr, size_t size) {
+    void *ret = realloc(ptr, size);
+    if (ret == NULL) {
+        secp256k1_callback_call(cb, "Out of memory");
+    }
+    return ret;
+}
+
 /* Extract the sign of an int64, take the abs and return a uint64, constant time. */
 SECP256K1_INLINE static int secp256k1_sign_and_abs64(uint64_t *out, int64_t in) {
     uint64_t mask0, mask1;
@@ -99,14 +107,6 @@ SECP256K1_INLINE static int secp256k1_clz64_var(uint64_t x) {
     /*FIXME: debruijn fallback. */
     for (ret = 0; ((x & (1ULL << 63)) == 0); x <<= 1, ret++);
 # endif
-    return ret;
-}
-
-static SECP256K1_INLINE void *checked_realloc(const secp256k1_callback* cb, void *ptr, size_t size) {
-    void *ret = realloc(ptr, size);
-    if (ret == NULL) {
-        secp256k1_callback_call(cb, "Out of memory");
-    }
     return ret;
 }
 
