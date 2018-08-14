@@ -251,7 +251,7 @@ void secp256k1_bulletproof_rangeproof_1(const secp256k1_context* ctx, const secp
 
 int secp256k1_bulletproof_rangeproof_2(
     const secp256k1_context* ctx, secp256k1_scratch_space* scratch, const secp256k1_bulletproof_generators* gens, 
-    unsigned char* tauxc, const secp256k1_pubkey* t_one, const secp256k1_pubkey* t_two,
+    unsigned char* tau_x, const secp256k1_pubkey* t_one, const secp256k1_pubkey* t_two,
     const uint64_t* value, const uint64_t* min_value, 
     const unsigned char* const* blind, const secp256k1_pubkey* const* commit, size_t n_commits, 
     const secp256k1_generator* value_gen, size_t nbits, 
@@ -269,7 +269,7 @@ int secp256k1_bulletproof_rangeproof_2(
     ARG_CHECK(scratch != NULL);
     ARG_CHECK(gens != NULL);
     ARG_CHECK(gens->n >= 2 * nbits * n_commits);
-    ARG_CHECK(tauxc != NULL);
+    ARG_CHECK(tau_x != NULL);
     ARG_CHECK(t_one != NULL);
     ARG_CHECK(t_two != NULL);
     ARG_CHECK(value != NULL);
@@ -316,7 +316,7 @@ int secp256k1_bulletproof_rangeproof_2(
         return 0;
     }
 
-    ret = secp256k1_bulletproof_rangeproof_prove_2_impl(&ctx->ecmult_ctx, scratch, tauxc, tge, nbits, value, min_value, blinds, commitp, n_commits, &value_genp, gens, nonce, common_nonce, extra_commit, extra_commit_len);
+    ret = secp256k1_bulletproof_rangeproof_prove_2_impl(&ctx->ecmult_ctx, scratch, tau_x, tge, nbits, value, min_value, blinds, commitp, n_commits, &value_genp, gens, nonce, common_nonce, extra_commit, extra_commit_len);
     secp256k1_scratch_deallocate_frame(scratch);
     return ret;
 }
@@ -324,7 +324,7 @@ int secp256k1_bulletproof_rangeproof_2(
 int secp256k1_bulletproof_rangeproof_3(
     const secp256k1_context* ctx, secp256k1_scratch_space* scratch, const secp256k1_bulletproof_generators* gens, 
     unsigned char* proof, size_t* plen, 
-    const unsigned char* tauxc, const secp256k1_pubkey* t_one, const secp256k1_pubkey* t_two,
+    const unsigned char* tau_x, const secp256k1_pubkey* t_one, const secp256k1_pubkey* t_two,
     const uint64_t* value, const uint64_t* min_value, 
     const unsigned char* const* blind, const secp256k1_pubkey* const* commit, size_t n_commits, 
     const secp256k1_generator* value_gen, size_t nbits, 
@@ -344,7 +344,7 @@ int secp256k1_bulletproof_rangeproof_3(
     ARG_CHECK(gens->n >= 2 * nbits * n_commits);
     ARG_CHECK(proof != NULL);
     ARG_CHECK(plen != NULL);
-    ARG_CHECK(tauxc != NULL);
+    ARG_CHECK(tau_x != NULL);
     ARG_CHECK(t_one != NULL);
     ARG_CHECK(t_two != NULL);
     ARG_CHECK(value != NULL);
@@ -391,7 +391,7 @@ int secp256k1_bulletproof_rangeproof_3(
         return 0;
     }
 
-    ret = secp256k1_bulletproof_rangeproof_prove_3_impl(&ctx->ecmult_ctx, scratch, proof, plen, tauxc, tge, nbits, value, min_value, blinds, commitp, n_commits, &value_genp, gens, nonce, common_nonce, extra_commit, extra_commit_len);
+    ret = secp256k1_bulletproof_rangeproof_prove_3_impl(&ctx->ecmult_ctx, scratch, proof, plen, tau_x, tge, nbits, value, min_value, blinds, commitp, n_commits, &value_genp, gens, nonce, common_nonce, extra_commit, extra_commit_len);
     secp256k1_scratch_deallocate_frame(scratch);
     return ret;
 }
