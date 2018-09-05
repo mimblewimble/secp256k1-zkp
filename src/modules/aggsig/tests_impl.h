@@ -29,6 +29,7 @@ void test_aggsig_api(void) {
     unsigned char sec_nonces[5][32];
     secp256k1_pubkey pub_nonces[5];
     unsigned char orig_sig;
+    unsigned char orig_msg;
     unsigned char *msg = seed;  /* shh ;) */
     const secp256k1_pubkey* pubkey_combiner[2];
     secp256k1_pubkey combiner_sum;
@@ -157,8 +158,10 @@ void test_aggsig_api(void) {
     CHECK(!secp256k1_aggsig_verify_single(vrfy, sig, msg, NULL, &pubkeys[0], NULL, 0));
     sig[0]=orig_sig;
     CHECK(secp256k1_aggsig_verify_single(vrfy, sig, msg, NULL, &pubkeys[0], NULL, 0));
+    orig_msg=msg[0];
     msg[0]=99;
     CHECK(!secp256k1_aggsig_verify_single(vrfy, sig, msg, NULL, &pubkeys[0], NULL, 0));
+    msg[0]=orig_msg;
 
     /* Test single api with pubkey in e */
     memset(sig, 0, sizeof(sig));
