@@ -44,17 +44,12 @@ static int secp256k1_compute_sighash_single(const secp256k1_context *ctx, secp25
 
     /* Encode public nonce */
     CHECK(secp256k1_ec_pubkey_serialize(ctx, buf, &buflen, pubnonce, SECP256K1_EC_COMPRESSED));
+    secp256k1_sha256_write(&hasher, buf+1, 32);
 
-    /* Encode public key, if present */
+    /* Encode public key */
     if (pubkey != NULL) {
-        /* Grin T3: using a public key indicates we are past the hard fork point, so we can use the full 32 bytes of the public nonce */
-        secp256k1_sha256_write(&hasher, buf+1, 32);
-        CHECK(secp256k1_ec_pubkey_serialize(ctx, buf, &buflen, pubkey, SECP256K1_EC_COMPRESSED));
-        secp256k1_sha256_write(&hasher, buf+1, 32);
-    }
-    else {
-        /* Remove the first encoding element, as it may differ depending on how we got here */
-        secp256k1_sha256_write(&hasher, buf+1, sizeof(buf-1));
+      CHECK(secp256k1_ec_pubkey_serialize(ctx, buf, &buflen, pubkey, SECP256K1_EC_COMPRESSED));
+      secp256k1_sha256_write(&hasher, buf+1, 32);
     }
 
     /* Encode message */
@@ -250,7 +245,7 @@ int secp256k1_aggsig_sign_single(const secp256k1_context* ctx,
 
     secp256k1_fe_normalize(&tmp_ge.x);
 
-    /* compute signature hash (in the simple case just message+pubnonce) */
+    /* compute signature hash (in the simple case just message+pubnonce+pubkey) */
     if (pubnonce_for_e != NULL) {
         secp256k1_compute_sighash_single(ctx, &sighash, pubnonce_for_e, pubkey_for_e, msg32);
     } else {
