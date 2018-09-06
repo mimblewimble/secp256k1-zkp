@@ -5215,13 +5215,10 @@ int main(int argc, char **argv) {
     run_bulletproofs_tests();
 #endif
 
-<<<<<<< HEAD
 #ifdef ENABLE_MODULE_AGGSIG
     run_aggsig_tests();
 #endif
 
-=======
->>>>>>> andrew_bp_fork/bulletproofs-rangeonly
 #ifdef ENABLE_MODULE_WHITELIST
     /* Key whitelisting tests */
     run_whitelist_tests();
