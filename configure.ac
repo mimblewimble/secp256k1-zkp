@@ -496,10 +496,13 @@ fi
 
 if test x"$enable_module_bulletproof" = x"yes"; then
   AC_DEFINE(ENABLE_MODULE_BULLETPROOF, 1, [Define this symbol to enable the Pedersen / zero knowledge bulletproof module])
+<<<<<<< HEAD
 fi
 
 if test x"$enable_module_aggsig" = x"yes"; then
   AC_DEFINE(ENABLE_MODULE_AGGSIG, 1, [Define this symbol to enable the Grin Aggsig module])
+=======
+>>>>>>> andrew_bp_fork/bulletproofs-rangeonly
 fi
 
 if test x"$enable_module_whitelist" = x"yes"; then
@@ -537,7 +540,10 @@ if test x"$enable_experimental" = x"yes"; then
   AC_MSG_NOTICE([Building Pedersen commitment module: $enable_module_commitment])
   AC_MSG_NOTICE([Building range proof module: $enable_module_rangeproof])
   AC_MSG_NOTICE([Building bulletproof module: $enable_module_bulletproof])
+<<<<<<< HEAD
   AC_MSG_NOTICE([Building aggsig module: $enable_module_aggsig])
+=======
+>>>>>>> andrew_bp_fork/bulletproofs-rangeonly
   AC_MSG_NOTICE([Building key whitelisting module: $enable_module_whitelist])
   AC_MSG_NOTICE([Building surjection proof module: $enable_module_surjectionproof])
   AC_MSG_NOTICE([******])
@@ -587,9 +593,12 @@ else
   if test x"$enable_module_bulletproof" = x"yes"; then
     AC_MSG_ERROR([Bulletproof module is experimental. Use --enable-experimental to allow.])
   fi
+<<<<<<< HEAD
   if test x"$enable_module_agggsig" = x"yes"; then
     AC_MSG_ERROR([Aggsig module is experimental. Use --enable-experimental to allow.])
   fi
+=======
+>>>>>>> andrew_bp_fork/bulletproofs-rangeonly
   if test x"$enable_module_whitelist" = x"yes"; then
     AC_MSG_ERROR([Key whitelisting module is experimental. Use --enable-experimental to allow.])
   fi
@@ -616,7 +625,10 @@ AM_CONDITIONAL([ENABLE_MODULE_GENERATOR], [test x"$enable_module_generator" = x"
 AM_CONDITIONAL([ENABLE_MODULE_COMMITMENT], [test x"$enable_module_commitment" = x"yes"])
 AM_CONDITIONAL([ENABLE_MODULE_RANGEPROOF], [test x"$enable_module_rangeproof" = x"yes"])
 AM_CONDITIONAL([ENABLE_MODULE_BULLETPROOF], [test x"$enable_module_bulletproof" = x"yes"])
+<<<<<<< HEAD
 AM_CONDITIONAL([ENABLE_MODULE_AGGSIG], [test x"$enable_module_aggsig" = x"yes"])
+=======
+>>>>>>> andrew_bp_fork/bulletproofs-rangeonly
 AM_CONDITIONAL([ENABLE_MODULE_WHITELIST], [test x"$enable_module_whitelist" = x"yes"])
 AM_CONDITIONAL([USE_JNI], [test x"$use_jni" == x"yes"])
 AM_CONDITIONAL([USE_EXTERNAL_ASM], [test x"$use_external_asm" = x"yes"])
