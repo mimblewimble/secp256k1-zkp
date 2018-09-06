@@ -213,8 +213,8 @@ void test_aggsig_api(void) {
         /* Randomize keys */
         for (j = 0; j < 2; j++) {
             random_scalar_order_test(&tmp_s);
-            secp256k1_scalar_get_b32(seckeys[i], &tmp_s);
-            CHECK(secp256k1_ec_pubkey_create(ctx, &pubkeys[i], seckeys[i]) == 1);
+            secp256k1_scalar_get_b32(seckeys[j], &tmp_s);
+            CHECK(secp256k1_ec_pubkey_create(ctx, &pubkeys[j], seckeys[j]) == 1);
         }
 
         /* Combine pubnonces */
@@ -245,7 +245,7 @@ void test_aggsig_api(void) {
         CHECK(secp256k1_aggsig_verify_single(vrfy, combined_sig, msg, &combiner_sum, &combiner_sum_2, &combiner_sum_2, 0));
         CHECK(secp256k1_aggsig_verify_single(vrfy, combined_sig, msg, NULL, &combiner_sum_2, &combiner_sum_2, 0));
 
-        /* And anything else doesnt' */
+        /* And anything else doesn't */
         CHECK(!secp256k1_aggsig_verify_single(vrfy, combined_sig, msg, &combiner_sum, &combiner_sum_2, NULL, 0));
         CHECK(!secp256k1_aggsig_verify_single(vrfy, combined_sig, msg, NULL, &pub_nonces[1], NULL, 0));
         CHECK(!secp256k1_aggsig_verify_single(vrfy, combined_sig, msg, NULL, &pub_nonces[1], &combiner_sum_2, 0));
