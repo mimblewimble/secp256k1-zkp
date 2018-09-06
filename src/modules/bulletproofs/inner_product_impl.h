@@ -28,9 +28,9 @@
 /* Bulletproof inner products consist of the four scalars and `2[log2(n) - 1]` points
  * `a_1`, `a_2`, `b_1`, `b_2`, `L_i` and `R_i`, where `i` ranges from 0 to `log2(n)-1`.
  *
- * The prover takes as input a point `P` and scalar `c`. It proves that there exist
- * scalars `a_i`, `b_i` for `i` ranging from 0 to `n-1`, such that
- *     `P = sum_i [a_i G_i + b_i H_i]` and `<{a_i}, {b_i}> = c`.
+ * The prover takes as input a point `P` and scalar `c`. It proves that it knows
+ * scalars `a_i`, `b_i` for `i` ranging from 1 to `n`, such that
+ *     `P = sum_i [a_i G_i + b_i H_i]` and `<{a_i}, {b_i}> = c`,
  * where `G_i` and `H_i` are standard NUMS generators.
  *
  * Verification of the proof comes down to a single multiexponentiation of the form
@@ -254,7 +254,7 @@ static int secp256k1_bulletproof_innerproduct_vfy_ecmult_callback(secp256k1_scal
              * cancellation attacks here. */
             if (ctx->proof[i].proof->rangeproof_cb != NULL) {
                 secp256k1_scalar rangeproof_offset;
-                if ((ctx->proof[i].proof->rangeproof_cb)(&rangeproof_offset, NULL, &ctx->randomizer[i], idx, ctx->proof[i].proof->rangeproof_cb_data) == 0) {
+                if ((ctx->proof[i].proof->rangeproof_cb)(&rangeproof_offset, NULL, &ctx->randomizer[i], idx, ctx->proof[i].proof->rangeproof_cb_data) != 1) {
                     return 0;
                 }
                 secp256k1_scalar_add(&term, &term, &rangeproof_offset);
@@ -290,7 +290,7 @@ static int secp256k1_bulletproof_innerproduct_vfy_ecmult_callback(secp256k1_scal
         secp256k1_scalar_clear(sc);
         for (i = 0; i < ctx->n_proofs; i++) {
             secp256k1_scalar term;
-            if ((ctx->proof[i].proof->rangeproof_cb)(&term, pt, &ctx->randomizer[i], 2 * (ctx->vec_len + ctx->lg_vec_len), ctx->proof[i].proof->rangeproof_cb_data) == 0) {
+            if ((ctx->proof[i].proof->rangeproof_cb)(&term, pt, &ctx->randomizer[i], 2 * (ctx->vec_len + ctx->lg_vec_len), ctx->proof[i].proof->rangeproof_cb_data) != 1) {
                 return 0;
             }
             secp256k1_scalar_add(sc, sc, &term);
@@ -303,7 +303,7 @@ static int secp256k1_bulletproof_innerproduct_vfy_ecmult_callback(secp256k1_scal
             proof_idx++;
             VERIFY_CHECK(proof_idx < ctx->n_proofs);
         }
-        if ((ctx->proof[proof_idx].proof->rangeproof_cb)(sc, pt, &ctx->randomizer[proof_idx], 2 * (ctx->vec_len + ctx->lg_vec_len), ctx->proof[proof_idx].proof->rangeproof_cb_data) == 0) {
+        if ((ctx->proof[proof_idx].proof->rangeproof_cb)(sc, pt, &ctx->randomizer[proof_idx], 2 * (ctx->vec_len + ctx->lg_vec_len), ctx->proof[proof_idx].proof->rangeproof_cb_data) != 1) {
             return 0;
         }
     }
@@ -479,7 +479,7 @@ static int secp256k1_bulletproof_inner_product_verify_impl(const secp256k1_ecmul
         for (j = n_ab - 1; j > 0; j--) {
             size_t prev_idx;
             if (j == n_ab / 2) {
-                prev_idx = j - 1; /* we go from a_n to b_0  */
+                prev_idx = j - 1; /* we go from a_{n-1} to b_0  */
             } else {
                 prev_idx = j & (j - 1); /* but from a_i' to a_i, where i' is i with its lowest set bit unset */
             }
@@ -765,7 +765,7 @@ static int secp256k1_bulletproof_inner_product_prove_impl(const secp256k1_ecmult
     }
     *proof_len = secp256k1_bulletproof_innerproduct_proof_length(n);
 
-    /* Special-case lengths 0 and 1 whose proofs are just expliict lists of scalars */
+    /* Special-case lengths 0 and 1 whose proofs are just explicit lists of scalars */
     if (n <= IP_AB_SCALARS / 2) {
         secp256k1_scalar a[IP_AB_SCALARS / 2];
         secp256k1_scalar b[IP_AB_SCALARS / 2];
