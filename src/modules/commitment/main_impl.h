@@ -166,12 +166,12 @@ int secp256k1_pedersen_verify_tally(const secp256k1_context* ctx, const secp256k
     ARG_CHECK(!n_neg || (neg != NULL));
     (void) ctx;
     secp256k1_gej_set_infinity(&accj);
-    for (i = 0; i < n_pos; i++) {
+    for (i = 0; i < n_neg; i++) {
         secp256k1_pedersen_commitment_load(&add, neg[i]);
         secp256k1_gej_add_ge_var(&accj, &accj, &add, NULL);
     }
     secp256k1_gej_neg(&accj, &accj);
-    for (i = 0; i < n_neg; i++) {
+    for (i = 0; i < n_pos; i++) {
         secp256k1_pedersen_commitment_load(&add, pos[i]);
         secp256k1_gej_add_ge_var(&accj, &accj, &add, NULL);
     }
