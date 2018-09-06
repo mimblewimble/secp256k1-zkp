@@ -48,6 +48,7 @@ static int secp256k1_compute_sighash_single(const secp256k1_context *ctx, secp25
 
     /* Encode public key */
     if (pubkey != NULL) {
+      buflen = sizeof(buf);
       CHECK(secp256k1_ec_pubkey_serialize(ctx, buf, &buflen, pubkey, SECP256K1_EC_COMPRESSED));
       secp256k1_sha256_write(&hasher, buf+1, 32);
     }
