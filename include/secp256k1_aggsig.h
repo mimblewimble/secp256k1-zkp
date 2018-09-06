@@ -122,34 +122,6 @@ SECP256K1_API int secp256k1_aggsig_sign_single(
     const unsigned char* seed)
 SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(4) SECP256K1_ARG_NONNULL(9) SECP256K1_WARN_UNUSED_RESULT;
 
-/** Generate a single-signer signature (or partial sig), without a stored context 
- *
- *  Returns: 1 on success, 0 on failure
- *  Args:    ctx: an existing context object, initialized for signing (cannot be NULL)
- *  Out:     sig64: the completed signature (cannot be NULL)
- *  In:      msg32: the message to sign (cannot be NULL)
- *           seckey32: the secret signing key (cannot be NULL)
- *           secnonce32: secret nonce to use. If NULL, a nonce will be generated
- *           extra32: secret key to add to the signature (cannot be NULL)
- *           pubnonce_for_e: If this is non-NULL, encode this value in e instead of the derived
- *           pubnonce_total: If non-NULL, allow this signature to be included in combined sig
- *               in all cases by negating secnonce32 if the public nonce total has jacobi symbol 
- *               -1. secnonce32 must also be provided
- *           seed: a 32-byte seed to use for the nonce-generating RNG (cannot be NULL)
- */
-
-SECP256K1_API int secp256k1_aggsig_sign_single_extra(
-    const secp256k1_context* ctx,
-    unsigned char *sig64,
-    const unsigned char *msg32,
-    const unsigned char *seckey32,
-    const unsigned char* secnonce32,
-    const unsigned char* extra32,
-    const secp256k1_pubkey *pubnonce_for_e,
-    const secp256k1_pubkey* pubnonce_total,
-    const unsigned char* seed)
-SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(4) SECP256K1_ARG_NONNULL(6) SECP256K1_ARG_NONNULL(9) SECP256K1_WARN_UNUSED_RESULT;
-
 /** Generate a single signature part in an aggregated signature
  *
  *  Returns: 1 on success, 0 on failure
@@ -227,28 +199,6 @@ SECP256K1_API int secp256k1_aggsig_verify_single(
     const secp256k1_pubkey *pubkey_total,
     const int is_partial)
 SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(5) SECP256K1_WARN_UNUSED_RESULT;
-
-/** Verify a single-signer signature, without a stored context 
- *
- *  Returns: 1 on success, 0 on failure
- *  Args:    ctx: an existing context object, initialized for signing (cannot be NULL)
- *  In:      sig64: signature (cannot be NULL)
- *           msg32: the message to verify (cannot be NULL)
- *           pubnonce: if non-NULL, override the public nonce used to calculate e
- *           pubkey: the public key (cannot be NULL)
- *           extrakey: an extra public key to subtract (cannot be NULL)
- *           is_partial: whether to ignore the jacobi symbol of the combined R, set this to 1
- *               to verify partial signatures that may have had their secret nonces negated
- */
-SECP256K1_API int secp256k1_aggsig_verify_single_extra(
-    const secp256k1_context* ctx,
-    const unsigned char *sig64,
-    const unsigned char *msg32,
-    const secp256k1_pubkey *pubnonce,
-    const secp256k1_pubkey *pubkey,
-    const secp256k1_pubkey *extrakey,
-    const int is_partial)
-SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(5) SECP256K1_ARG_NONNULL(6) SECP256K1_WARN_UNUSED_RESULT;
 
 /** Verify an aggregate signature
  *
