@@ -116,8 +116,9 @@ SECP256K1_WARN_UNUSED_RESULT SECP256K1_API int secp256k1_bulletproof_rangeproof_
  *           commit: pedersen commitment that the rangeproof is over (cannot be NULL)
  *        value_gen: generator multiplied by value in pedersen commitments (cannot be NULL)
  *            nonce: random 32-byte seed used to derive blinding factors (cannot be NULL)
- *     extra_commit: additonal data committed to by the rangeproof
+ *     extra_commit: additional data committed to by the rangeproof
  * extra_commit_len: length of additional data
+ *          message: optional 16 bytes of message to recover
  */
 SECP256K1_WARN_UNUSED_RESULT SECP256K1_API int secp256k1_bulletproof_rangeproof_rewind(
     const secp256k1_context* ctx,
@@ -131,7 +132,8 @@ SECP256K1_WARN_UNUSED_RESULT SECP256K1_API int secp256k1_bulletproof_rangeproof_
     const secp256k1_generator* value_gen,
     const unsigned char* nonce,
     const unsigned char* extra_commit,
-    size_t extra_commit_len
+    size_t extra_commit_len,
+    unsigned char* message
 ) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(4) SECP256K1_ARG_NONNULL(5) SECP256K1_ARG_NONNULL(8) SECP256K1_ARG_NONNULL(9);
 
 /** Produces an aggregate Bulletproof rangeproof for a set of Pedersen commitments
@@ -151,6 +153,7 @@ SECP256K1_WARN_UNUSED_RESULT SECP256K1_API int secp256k1_bulletproof_rangeproof_
  *            nonce: random 32-byte seed used to derive blinding factors (cannot be NULL)
  *     extra_commit: additonal data committed to by the rangeproof
  * extra_commit_len: length of additional data
+ *          message: optional 16 bytes of message that can be recovered by rewinding with the correct nonce
  */
 SECP256K1_WARN_UNUSED_RESULT SECP256K1_API int secp256k1_bulletproof_rangeproof_prove(
     const secp256k1_context* ctx,
@@ -166,7 +169,8 @@ SECP256K1_WARN_UNUSED_RESULT SECP256K1_API int secp256k1_bulletproof_rangeproof_
     size_t nbits,
     const unsigned char* nonce,
     const unsigned char* extra_commit,
-    size_t extra_commit_len
+    size_t extra_commit_len,
+    const unsigned char* message
 ) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(4) SECP256K1_ARG_NONNULL(5) SECP256K1_ARG_NONNULL(6) SECP256K1_ARG_NONNULL(8) SECP256K1_ARG_NONNULL(10) SECP256K1_ARG_NONNULL(12);
 
 SECP256K1_API void secp256k1_bulletproof_rangeproof_1(
