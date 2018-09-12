@@ -155,7 +155,7 @@ SECP256K1_WARN_UNUSED_RESULT SECP256K1_API int secp256k1_bulletproof_rangeproof_
  *        value_gen: generator multiplied by value in pedersen commitments (cannot be NULL)
  *            nbits: number of bits proven for each range
  *            nonce: random 32-byte seed used to derive blinding factors (cannot be NULL)
- *     common_nonce: 
+ *    private_nonce: 
  *     extra_commit: additonal data committed to by the rangeproof
  * extra_commit_len: length of additional data
  *          message: optional 16 bytes of message that can be recovered by rewinding with the correct nonce
@@ -177,7 +177,7 @@ SECP256K1_WARN_UNUSED_RESULT SECP256K1_API int secp256k1_bulletproof_rangeproof_
     const secp256k1_generator* value_gen,
     size_t nbits,
     const unsigned char* nonce,
-    const unsigned char* common_nonce,
+    const unsigned char* private_nonce,
     const unsigned char* extra_commit,
     size_t extra_commit_len,
     const unsigned char* message
