@@ -142,15 +142,20 @@ SECP256K1_WARN_UNUSED_RESULT SECP256K1_API int secp256k1_bulletproof_rangeproof_
  *  Args:       ctx: pointer to a context object initialized for signing and verification (cannot be NULL)
  *          scratch: scratch space with enough memory for verification (cannot be NULL)
  *             gens: generator set with at least 2*nbits*n_commits many generators (cannot be NULL)
- *  Out:      proof: byte-serialized rangeproof (cannot be NULL)
- *  In/out:    plen: pointer to size of `proof`, to be replaced with actual length of proof (cannot be NULL)
+ *  Out:      proof: byte-serialized rangeproof
+ *  In/out:    plen: pointer to size of `proof`, to be replaced with actual length of proof
+ *            tau_x: 
+ *            t_one: 
+ *            t_two: 
  *  In:       value: array of values committed by the Pedersen commitments (cannot be NULL)
  *        min_value: array of minimum values to prove ranges above, or NULL for all-zeroes
  *            blind: array of blinding factors of the Pedersen commitments (cannot be NULL)
+ *          commits: 
  *        n_commits: number of entries in the `value` and `blind` arrays
  *        value_gen: generator multiplied by value in pedersen commitments (cannot be NULL)
  *            nbits: number of bits proven for each range
  *            nonce: random 32-byte seed used to derive blinding factors (cannot be NULL)
+ *     common_nonce: 
  *     extra_commit: additonal data committed to by the rangeproof
  * extra_commit_len: length of additional data
  *          message: optional 16 bytes of message that can be recovered by rewinding with the correct nonce
@@ -158,70 +163,25 @@ SECP256K1_WARN_UNUSED_RESULT SECP256K1_API int secp256k1_bulletproof_rangeproof_
 SECP256K1_WARN_UNUSED_RESULT SECP256K1_API int secp256k1_bulletproof_rangeproof_prove(
     const secp256k1_context* ctx,
     secp256k1_scratch_space* scratch,
-    const secp256k1_bulletproof_generators *gens,
+    const secp256k1_bulletproof_generators* gens,
     unsigned char* proof,
     size_t* plen,
-    const uint64_t *value,
-    const uint64_t *min_value,
+    unsigned char* tau_x, 
+    secp256k1_pubkey* t_one, 
+    secp256k1_pubkey* t_two,
+    const uint64_t* value,
+    const uint64_t* min_value,
     const unsigned char* const* blind,
+    const secp256k1_pedersen_commitment* const* commits,
     size_t n_commits,
     const secp256k1_generator* value_gen,
     size_t nbits,
     const unsigned char* nonce,
+    const unsigned char* common_nonce,
     const unsigned char* extra_commit,
     size_t extra_commit_len,
     const unsigned char* message
-) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(4) SECP256K1_ARG_NONNULL(5) SECP256K1_ARG_NONNULL(6) SECP256K1_ARG_NONNULL(8) SECP256K1_ARG_NONNULL(10) SECP256K1_ARG_NONNULL(12);
-
-SECP256K1_API void secp256k1_bulletproof_rangeproof_1(
-    const secp256k1_context* ctx,
-    const secp256k1_bulletproof_generators *gens,
-    secp256k1_pubkey* t_one,
-    secp256k1_pubkey* t_two,
-    const unsigned char* nonce
-) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(4) SECP256K1_ARG_NONNULL(5);
-
-SECP256K1_WARN_UNUSED_RESULT SECP256K1_API int secp256k1_bulletproof_rangeproof_2(
-    const secp256k1_context* ctx,
-    secp256k1_scratch_space* scratch,
-    const secp256k1_bulletproof_generators* gens,
-    unsigned char* tau_x,
-    const secp256k1_pubkey* t_one,
-    const secp256k1_pubkey* t_two,
-    const uint64_t* value,
-    const uint64_t* min_value,
-    const unsigned char* const* blind,
-    const secp256k1_pubkey* const* commit,
-    size_t n_commits,
-    const secp256k1_generator* value_gen,
-    size_t nbits,
-    const unsigned char* nonce,
-    const unsigned char* common_nonce,
-    const unsigned char* extra_commit,
-    size_t extra_commit_len
-) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(4) SECP256K1_ARG_NONNULL(5) SECP256K1_ARG_NONNULL(6) SECP256K1_ARG_NONNULL(7) SECP256K1_ARG_NONNULL(9) SECP256K1_ARG_NONNULL(10) SECP256K1_ARG_NONNULL(12) SECP256K1_ARG_NONNULL(14) SECP256K1_ARG_NONNULL(15);
-
-SECP256K1_WARN_UNUSED_RESULT SECP256K1_API int secp256k1_bulletproof_rangeproof_3(
-    const secp256k1_context* ctx,
-    secp256k1_scratch_space* scratch,
-    const secp256k1_bulletproof_generators* gens, 
-    unsigned char* proof,
-    size_t* plen,
-    const unsigned char* tau_x,
-    const secp256k1_pubkey* t_one,
-    const secp256k1_pubkey* t_two,
-    const uint64_t* value,
-    const uint64_t* min_value,
-    const unsigned char* const* blind,
-    const secp256k1_pubkey* const* commit,
-    size_t n_commits, 
-    const secp256k1_generator* value_gen,
-    size_t nbits, 
-    const unsigned char* nonce,
-    const unsigned char* common_nonce,
-    const unsigned char* extra_commit,
-    size_t extra_commit_len
-) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(4) SECP256K1_ARG_NONNULL(5) SECP256K1_ARG_NONNULL(6) SECP256K1_ARG_NONNULL(7) SECP256K1_ARG_NONNULL(8) SECP256K1_ARG_NONNULL(9) SECP256K1_ARG_NONNULL(11) SECP256K1_ARG_NONNULL(12) SECP256K1_ARG_NONNULL(14) SECP256K1_ARG_NONNULL(16) SECP256K1_ARG_NONNULL(17);
+) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(9) SECP256K1_ARG_NONNULL(11) SECP256K1_ARG_NONNULL(14) SECP256K1_ARG_NONNULL(16);
 
 # ifdef __cplusplus
 }
