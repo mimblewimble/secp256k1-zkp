@@ -566,8 +566,74 @@ void test_bulletproof_rangeproof_aggregate(size_t nbits, size_t n_commits, size_
     free(blind);
 }
 
+void test_multi_party_bulletproof(size_t n_parties, secp256k1_scratch_space* scratch, const secp256k1_bulletproof_generators *gens) {
+    size_t j;
+    secp256k1_scalar tmp_s;
+    unsigned char tmp_c[32];
+    unsigned char common_nonce[32];
+    unsigned char nonces[10][32];
+    unsigned char blinds[10][32];
+    const unsigned char* blind_ptr[1];
+    secp256k1_pedersen_commitment* partial_commits[10];
+    uint64_t value[1] = {11223344};
+    secp256k1_pedersen_commitment commit[1];
+    const secp256k1_pedersen_commitment *commit_ptr[1];
+    const secp256k1_pubkey* t_1s[10];
+    const secp256k1_pubkey* t_2s[10];
+    secp256k1_pubkey t_1_sum;
+    secp256k1_pubkey t_2_sum;
+    unsigned char tau_x_sum[32];
+    unsigned char proof[675];
+    size_t plen = 675;
+
+    if (n_parties < 2 || n_parties > 10) {
+        return;
+    }
+
+    random_scalar_order_test(&tmp_s);
+    secp256k1_scalar_get_b32(common_nonce, &tmp_s);
+
+    for (j=0;j<n_parties;j++) {
+        random_scalar_order_test(&tmp_s);
+        secp256k1_scalar_get_b32(nonces[j], &tmp_s);
+        random_scalar_order_test(&tmp_s);
+        secp256k1_scalar_get_b32(blinds[j], &tmp_s);
+
+        partial_commits[j] = malloc(sizeof(secp256k1_pedersen_commitment));
+        
+        if (j == 0) {
+            CHECK(secp256k1_pedersen_commit(ctx, partial_commits[j], blinds[j], value[0], &secp256k1_generator_const_h, &secp256k1_generator_const_g) == 1);
+        }
+        else {
+            CHECK(secp256k1_pedersen_commit(ctx, partial_commits[j], blinds[j], 0, &secp256k1_generator_const_h, &secp256k1_generator_const_g) == 1);
+        }
+    }
+    CHECK(secp256k1_pedersen_commit_sum(ctx, commit, partial_commits, n_parties, NULL, 0) == 1);
+    commit_ptr[0] = commit;
+
+    for (j=0;j<n_parties;j++) {
+        t_1s[j] = malloc(sizeof(secp256k1_pubkey));
+        t_2s[j] = malloc(sizeof(secp256k1_pubkey));
+
+        blind_ptr[0] = blinds[j];
+        CHECK(secp256k1_bulletproof_rangeproof_prove(ctx, scratch, gens, NULL, NULL, NULL, t_1s[j], t_2s[j], value, NULL, blind_ptr, commit_ptr, 1, &secp256k1_generator_const_h, 64, common_nonce, nonces[j], NULL, 0, NULL) == 1);
+    }
+    CHECK(secp256k1_ec_pubkey_combine(ctx, &t_1_sum, t_1s, n_parties) == 1);
+    CHECK(secp256k1_ec_pubkey_combine(ctx, &t_2_sum, t_2s, n_parties) == 1);
+    memset(tau_x_sum, 0, 32);
+    for (j=0;j<n_parties;j++) {
+        blind_ptr[0] = blinds[j];
+        CHECK(secp256k1_bulletproof_rangeproof_prove(ctx, scratch, gens, NULL, NULL, tmp_c, &t_1_sum, &t_2_sum, value, NULL, blind_ptr, commit_ptr, 1, &secp256k1_generator_const_h, 64, common_nonce, nonces[j], NULL, 0, NULL) == 1);
+        CHECK(secp256k1_ec_privkey_tweak_add(ctx, tau_x_sum, tmp_c) == 1);
+    }
+    blind_ptr[0] = blinds[0];
+    CHECK(secp256k1_bulletproof_rangeproof_prove(ctx, scratch, gens, proof, &plen, tau_x_sum, &t_1_sum, &t_2_sum, value, NULL, blind_ptr, commit_ptr, 1, &secp256k1_generator_const_h, 64, common_nonce, nonces[0], NULL, 0, NULL) == 1);
+    CHECK(secp256k1_bulletproof_rangeproof_verify(ctx, scratch, gens, proof, plen, NULL, commit, 1, 64, &secp256k1_generator_const_h, NULL, 0) == 1);
+}
+
 void run_bulletproofs_tests(void) {
     size_t i;
+    secp256k1_scratch *scratch;
 
     /* Make a ton of generators */
     secp256k1_bulletproof_generators *gens = secp256k1_bulletproof_generators_create(ctx, &secp256k1_generator_const_h, 32768);
@@ -602,6 +668,14 @@ void run_bulletproofs_tests(void) {
     test_bulletproof_rangeproof_aggregate(8, 4, 610, gens);
 
     secp256k1_bulletproof_generators_destroy(ctx, gens);
+
+    scratch = secp256k1_scratch_space_create(ctx, 256*(1<<20));
+    gens = secp256k1_bulletproof_generators_create(ctx, &secp256k1_generator_const_g, 256);
+    for (i=2;i<=10;i++) {
+        test_multi_party_bulletproof(i, scratch, gens);
+    }
+    secp256k1_bulletproof_generators_destroy(ctx, gens);
+    secp256k1_scratch_destroy(scratch);
 }
 #undef MAX_WIDTH
 

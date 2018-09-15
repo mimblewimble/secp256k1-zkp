@@ -543,7 +543,6 @@ static int secp256k1_bulletproof_rangeproof_prove_impl(
         secp256k1_scalar vals;
         secp256k1_scalar_set_u64(&vals, value[0]);
         unsigned char vals_bytes[32];
-        int overflow;
         if (message != NULL) {
             /* Combine value with 16 bytes of optional message */
             secp256k1_scalar_get_b32(&vals_bytes, &vals);
