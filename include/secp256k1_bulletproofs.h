@@ -144,18 +144,18 @@ SECP256K1_WARN_UNUSED_RESULT SECP256K1_API int secp256k1_bulletproof_rangeproof_
  *             gens: generator set with at least 2*nbits*n_commits many generators (cannot be NULL)
  *  Out:      proof: byte-serialized rangeproof
  *  In/out:    plen: pointer to size of `proof`, to be replaced with actual length of proof
- *            tau_x: 
- *            t_one: 
- *            t_two: 
+ *            tau_x: only for multi-party; 32-byte, output in second step or input in final step
+ *            t_one: only for multi-party; public key, output in first step or input for the others
+ *            t_two: only for multi-party; public key, output in first step or input for the others
  *  In:       value: array of values committed by the Pedersen commitments (cannot be NULL)
  *        min_value: array of minimum values to prove ranges above, or NULL for all-zeroes
  *            blind: array of blinding factors of the Pedersen commitments (cannot be NULL)
- *          commits: 
+ *          commits: only for multi-party; array of pointers to commitments
  *        n_commits: number of entries in the `value` and `blind` arrays
  *        value_gen: generator multiplied by value in pedersen commitments (cannot be NULL)
  *            nbits: number of bits proven for each range
  *            nonce: random 32-byte seed used to derive blinding factors (cannot be NULL)
- *    private_nonce: 
+ *    private_nonce: only for multi-party; random 32-byte seed used to derive private blinding factors
  *     extra_commit: additonal data committed to by the rangeproof
  * extra_commit_len: length of additional data
  *          message: optional 16 bytes of message that can be recovered by rewinding with the correct nonce
