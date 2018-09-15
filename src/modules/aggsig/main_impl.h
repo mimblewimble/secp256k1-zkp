@@ -190,6 +190,7 @@ int secp256k1_aggsig_sign_single(const secp256k1_context* ctx,
     const unsigned char *msg32,
     const unsigned char *seckey32,
     const unsigned char* secnonce32,
+    const unsigned char* extra32,
     const secp256k1_pubkey* pubnonce_for_e,
     const secp256k1_pubkey* pubnonce_total,
     const secp256k1_pubkey* pubkey_for_e,
@@ -208,6 +209,7 @@ int secp256k1_aggsig_sign_single(const secp256k1_context* ctx,
     secp256k1_ge final;
     int overflow;
     int retry;
+    secp256k1_scalar tmp_scalar;
 
     VERIFY_CHECK(ctx != NULL);
     ARG_CHECK(secp256k1_ecmult_gen_context_is_built(&ctx->ecmult_gen_ctx));
@@ -262,6 +264,16 @@ int secp256k1_aggsig_sign_single(const secp256k1_context* ctx,
 
     secp256k1_scalar_mul(&sec, &sec, &sighash);
     secp256k1_scalar_add(&sec, &sec, &secnonce);
+
+    if (extra32 != NULL) {
+        /* add extra scalar */
+        secp256k1_scalar_set_b32(&tmp_scalar, extra32, &overflow);
+        if (overflow) {
+            secp256k1_scalar_clear(&sec);
+            return 0;
+        }
+        secp256k1_scalar_add(&sec, &sec, &tmp_scalar);
+    }
 
     /* finalize */
     secp256k1_scalar_get_b32(sig64, &sec);
@@ -504,6 +516,7 @@ int secp256k1_aggsig_verify_single(
     const secp256k1_pubkey *pubnonce,
     const secp256k1_pubkey *pubkey,
     const secp256k1_pubkey *pubkey_total,
+    const secp256k1_pubkey *extra_pubkey,
     const int is_partial){
 
     secp256k1_scalar g_sc;
@@ -513,7 +526,7 @@ int secp256k1_aggsig_verify_single(
     secp256k1_scalar sighash;
     secp256k1_scratch_space *scratch;
     secp256k1_verify_callback_data cbdata;
-    secp256k1_ge tmp_pubnonce_ge;
+    secp256k1_ge tmp_ge;
     secp256k1_pubkey tmp_pk;
 
     int overflow;
@@ -540,8 +553,8 @@ int secp256k1_aggsig_verify_single(
     if (pubnonce != NULL) {
         secp256k1_compute_sighash_single(ctx, &sighash, pubnonce, pubkey_total, msg32);
     } else {
-        secp256k1_ge_set_xquad(&tmp_pubnonce_ge, &r_x);
-        secp256k1_pubkey_save(&tmp_pk, &tmp_pubnonce_ge);
+        secp256k1_ge_set_xquad(&tmp_ge, &r_x);
+        secp256k1_pubkey_save(&tmp_pk, &tmp_ge);
         secp256k1_compute_sighash_single(ctx, &sighash, &tmp_pk, pubkey_total, msg32);
     }
 
@@ -557,6 +570,13 @@ int secp256k1_aggsig_verify_single(
     }
 
     secp256k1_scratch_space_destroy(scratch);
+
+    if (extra_pubkey != NULL) {
+        /* Subtract an extra public key */
+        secp256k1_pubkey_load(ctx, &tmp_ge, extra_pubkey);
+        secp256k1_ge_neg(&tmp_ge, &tmp_ge);
+        secp256k1_gej_add_ge(&pk_sum, &pk_sum, &tmp_ge);
+    }
 
     secp256k1_ge_set_gej(&pk_sum_ge, &pk_sum);
 
