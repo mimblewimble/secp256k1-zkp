@@ -182,19 +182,34 @@ int secp256k1_bulletproof_rangeproof_rewind(const secp256k1_context* ctx, const 
     return ret;
 }
 
-int secp256k1_bulletproof_rangeproof_prove(const secp256k1_context* ctx, secp256k1_scratch_space *scratch, const secp256k1_bulletproof_generators *gens, unsigned char *proof, size_t *plen, const uint64_t *value, const uint64_t *min_value, const unsigned char* const* blind, size_t n_commits, const secp256k1_generator *value_gen, size_t nbits, const unsigned char *nonce, const unsigned char *extra_commit, size_t extra_commit_len, const unsigned char *message) {
+int secp256k1_bulletproof_rangeproof_prove(
+    const secp256k1_context* ctx, secp256k1_scratch_space* scratch, const secp256k1_bulletproof_generators* gens, 
+    unsigned char* proof, size_t* plen, 
+    unsigned char* tau_x, secp256k1_pubkey* t_one, secp256k1_pubkey* t_two, 
+    const uint64_t* value, const uint64_t* min_value, 
+    const unsigned char* const* blind, const secp256k1_pedersen_commitment* const* commits, size_t n_commits, 
+    const secp256k1_generator* value_gen, size_t nbits, 
+    const unsigned char* nonce, const unsigned char* private_nonce, 
+    const unsigned char* extra_commit, size_t extra_commit_len, const unsigned char* message
+) {
     int ret;
     secp256k1_ge *commitp;
     secp256k1_scalar *blinds;
     secp256k1_ge value_genp;
     size_t i;
+    const unsigned char *secondary_nonce;
+    secp256k1_ge *tge = NULL;
 
     VERIFY_CHECK(ctx != NULL);
     ARG_CHECK(scratch != NULL);
     ARG_CHECK(gens != NULL);
     ARG_CHECK(gens->n >= 2 * nbits * n_commits);
-    ARG_CHECK(proof != NULL);
-    ARG_CHECK(plen != NULL);
+    ARG_CHECK(
+        (proof != NULL && plen != NULL && tau_x == NULL && t_one == NULL && t_two == NULL && commits == NULL && private_nonce == NULL) ||
+        (proof == NULL && plen == NULL && tau_x == NULL && t_one != NULL && t_two != NULL && commits != NULL && private_nonce != NULL) ||
+        (proof == NULL && plen == NULL && tau_x != NULL && t_one != NULL && t_two != NULL && commits != NULL && private_nonce != NULL) ||
+        (proof != NULL && plen != NULL && tau_x != NULL && t_one != NULL && t_two != NULL && commits != NULL && private_nonce != NULL)
+    ); /* 1) normal BP, 2) multi-party BP step 1, 3) multi-party BP step 2, 4) multi-party BP step 3 */
     ARG_CHECK(value != NULL);
     ARG_CHECK(blind != NULL);
     ARG_CHECK(value_gen != NULL);
@@ -220,16 +235,49 @@ int secp256k1_bulletproof_rangeproof_prove(const secp256k1_context* ctx, secp256
     secp256k1_generator_load(&value_genp, value_gen);
     for (i = 0; i < n_commits; i++) {
         int overflow;
-        secp256k1_gej commitj;
         secp256k1_scalar_set_b32(&blinds[i], blind[i], &overflow);
         if (overflow || secp256k1_scalar_is_zero(&blinds[i])) {
             return 0;
         }
-        secp256k1_pedersen_ecmult(&commitj, &blinds[i], value[i], &value_genp, &gens->blinding_gen[0]);
-        secp256k1_ge_set_gej(&commitp[i], &commitj);
+        
+        if (commits == NULL) {
+            /* Calculate commitment from blinding factor */
+            secp256k1_gej commitj;
+            secp256k1_pedersen_ecmult(&commitj, &blinds[i], value[i], &value_genp, &gens->blinding_gen[0]);
+            secp256k1_ge_set_gej(&commitp[i], &commitj);
+        }
+        else {
+            /* Multi-party bulletproof: total blinding factor unknown. Input commitment(s) */
+            secp256k1_pedersen_commitment_load(&commitp[i], commits[i]);
+        }
     }
 
-    ret = secp256k1_bulletproof_rangeproof_prove_impl(&ctx->ecmult_ctx, scratch, proof, plen, nbits, value, min_value, blinds, commitp, n_commits, &value_genp, gens, nonce, extra_commit, extra_commit_len, message);
+    if (private_nonce == NULL) {
+        secondary_nonce = nonce;
+    }
+    else {
+        secondary_nonce = private_nonce;
+    }
+
+    if (t_one != NULL) {
+        tge = malloc(2*sizeof(secp256k1_ge));
+        if (tau_x != NULL) {
+            if (!secp256k1_pubkey_load(ctx, &tge[0], t_one)) {
+                return 0;
+            }
+            if (!secp256k1_pubkey_load(ctx, &tge[1], t_two)) {
+                return 0;
+            }
+        }
+    }
+
+    ret = secp256k1_bulletproof_rangeproof_prove_impl(&ctx->ecmult_ctx, scratch, proof, plen, tau_x, tge, nbits, value, min_value, blinds, commitp, n_commits, &value_genp, gens, nonce, secondary_nonce, extra_commit, extra_commit_len, message);
+
+    if (t_one != NULL && tau_x == NULL) {
+        secp256k1_pubkey_save(t_one, &tge[0]);
+        secp256k1_pubkey_save(t_two, &tge[1]);
+    }
+    
     secp256k1_scratch_deallocate_frame(scratch);
     return ret;
 }
