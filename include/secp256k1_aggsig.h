@@ -103,6 +103,7 @@ SECP256K1_API int secp256k1_aggsig_export_secnonce_single(
  *  In:      msg32: the message to sign (cannot be NULL)
  *           seckey32: the secret signing key (cannot be NULL)
  *           secnonce32: secret nonce to use. If NULL, a nonce will be generated
+ *           extra32: if non-NULL, add this key to s
  *           pubnonce_for_e: If this is non-NULL, encode this value in e instead of the derived
  *           pubnonce_total: If non-NULL, allow this signature to be included in combined sig
  *               in all cases by negating secnonce32 if the public nonce total has jacobi symbol 
@@ -116,11 +117,12 @@ SECP256K1_API int secp256k1_aggsig_sign_single(
     const unsigned char *msg32,
     const unsigned char *seckey32,
     const unsigned char* secnonce32,
+    const unsigned char* extra32,
     const secp256k1_pubkey *pubnonce_for_e,
     const secp256k1_pubkey* pubnonce_total,
     const secp256k1_pubkey* pubkey_for_e,
     const unsigned char* seed)
-SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(4) SECP256K1_ARG_NONNULL(9) SECP256K1_WARN_UNUSED_RESULT;
+SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(4) SECP256K1_ARG_NONNULL(10) SECP256K1_WARN_UNUSED_RESULT;
 
 /** Generate a single signature part in an aggregated signature
  *
@@ -187,6 +189,7 @@ SECP256K1_API int secp256k1_aggsig_add_signatures_single(
  *           pubnonce: if non-NULL, override the public nonce used to calculate e
  *           pubkey: the public key (cannot be NULL)
  *           pubkey_total: if non-NULL, encode this value in e
+ *           extra_pubkey: if non-NULL, subtract this pubkey from sG
  *           is_partial: whether to ignore the jacobi symbol of the combined R, set this to 1
  *               to verify partial signatures that may have had their secret nonces negated
  */
@@ -197,6 +200,7 @@ SECP256K1_API int secp256k1_aggsig_verify_single(
     const secp256k1_pubkey *pubnonce,
     const secp256k1_pubkey *pubkey,
     const secp256k1_pubkey *pubkey_total,
+    const secp256k1_pubkey *extra_pubkey,
     const int is_partial)
 SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(5) SECP256K1_WARN_UNUSED_RESULT;
 
