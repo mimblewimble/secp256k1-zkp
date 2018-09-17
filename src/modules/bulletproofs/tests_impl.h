@@ -578,8 +578,8 @@ void test_multi_party_bulletproof(size_t n_parties, secp256k1_scratch_space* scr
     uint64_t value[1] = {11223344};
     secp256k1_pedersen_commitment commit[1];
     const secp256k1_pedersen_commitment *commit_ptr[1];
-    const secp256k1_pubkey* t_1s[10];
-    const secp256k1_pubkey* t_2s[10];
+    secp256k1_pubkey* t_1s[10];
+    secp256k1_pubkey* t_2s[10];
     secp256k1_pubkey t_1_sum;
     secp256k1_pubkey t_2_sum;
     unsigned char tau_x_sum[32];
@@ -600,7 +600,7 @@ void test_multi_party_bulletproof(size_t n_parties, secp256k1_scratch_space* scr
         secp256k1_scalar_get_b32(blinds[j], &tmp_s);
 
         partial_commits[j] = malloc(sizeof(secp256k1_pedersen_commitment));
-        
+
         if (j == 0) {
             CHECK(secp256k1_pedersen_commit(ctx, partial_commits[j], blinds[j], value[0], &secp256k1_generator_const_h, &secp256k1_generator_const_g) == 1);
         }
@@ -608,18 +608,17 @@ void test_multi_party_bulletproof(size_t n_parties, secp256k1_scratch_space* scr
             CHECK(secp256k1_pedersen_commit(ctx, partial_commits[j], blinds[j], 0, &secp256k1_generator_const_h, &secp256k1_generator_const_g) == 1);
         }
     }
-    CHECK(secp256k1_pedersen_commit_sum(ctx, commit, partial_commits, n_parties, NULL, 0) == 1);
+    CHECK(secp256k1_pedersen_commit_sum(ctx, commit, (const secp256k1_pedersen_commitment * const *) partial_commits, n_parties, NULL, 0) == 1);
     commit_ptr[0] = commit;
 
     for (j=0;j<n_parties;j++) {
         t_1s[j] = malloc(sizeof(secp256k1_pubkey));
         t_2s[j] = malloc(sizeof(secp256k1_pubkey));
-
         blind_ptr[0] = blinds[j];
         CHECK(secp256k1_bulletproof_rangeproof_prove(ctx, scratch, gens, NULL, NULL, NULL, t_1s[j], t_2s[j], value, NULL, blind_ptr, commit_ptr, 1, &secp256k1_generator_const_h, 64, common_nonce, nonces[j], NULL, 0, NULL) == 1);
     }
-    CHECK(secp256k1_ec_pubkey_combine(ctx, &t_1_sum, t_1s, n_parties) == 1);
-    CHECK(secp256k1_ec_pubkey_combine(ctx, &t_2_sum, t_2s, n_parties) == 1);
+    CHECK(secp256k1_ec_pubkey_combine(ctx, &t_1_sum, (const secp256k1_pubkey * const *) t_1s, n_parties) == 1);
+    CHECK(secp256k1_ec_pubkey_combine(ctx, &t_2_sum, (const secp256k1_pubkey * const *) t_2s, n_parties) == 1);
     memset(tau_x_sum, 0, 32);
     for (j=0;j<n_parties;j++) {
         blind_ptr[0] = blinds[j];

@@ -460,6 +460,7 @@ static int secp256k1_bulletproof_rangeproof_prove_impl(
     secp256k1_gej tmpj;
     size_t i, j;
     int overflow;
+    unsigned char vals_bytes[32] = {0};
     /* Inner product proof variables */
     secp256k1_ge out_pt[4];
 
@@ -542,14 +543,13 @@ static int secp256k1_bulletproof_rangeproof_prove_impl(
     if (n_commits == 1) {
         secp256k1_scalar vals;
         secp256k1_scalar_set_u64(&vals, value[0]);
-        unsigned char vals_bytes[32];
         if (message != NULL) {
             /* Combine value with 16 bytes of optional message */
-            secp256k1_scalar_get_b32(&vals_bytes, &vals);
+            secp256k1_scalar_get_b32(vals_bytes, &vals);
             for (i=0; i<16; i++) {
                 vals_bytes[i+8] = message[i];
             }
-            secp256k1_scalar_set_b32(&vals, &vals_bytes, &overflow);
+            secp256k1_scalar_set_b32(&vals, vals_bytes, &overflow);
         }
         secp256k1_scalar_negate(&vals, &vals); /* Negate so it'll be positive in -mu */
         secp256k1_scalar_add(&alpha, &alpha, &vals);
