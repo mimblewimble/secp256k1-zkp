@@ -276,10 +276,10 @@ int secp256k1_aggsig_sign_single(const secp256k1_context* ctx,
     }
 
     /* finalize */
-    secp256k1_scalar_get_b32(sig64, &sec);
     secp256k1_ge_set_gej(&final, &pubnonce_j);
     secp256k1_fe_normalize_var(&final.x);
-    secp256k1_fe_get_b32(sig64 + 32, &final.x);
+    secp256k1_fe_get_b32(sig64, &final.x);
+    secp256k1_scalar_get_b32(sig64 + 32, &sec);
 
     secp256k1_scalar_clear(&sec);
 
@@ -373,10 +373,10 @@ int secp256k1_aggsig_combine_signatures(const secp256k1_context* ctx, secp256k1_
         secp256k1_gej_neg(&aggctx->pubnonce_sum, &aggctx->pubnonce_sum);
     }
 
-    secp256k1_scalar_get_b32(sig64, &s);
     secp256k1_ge_set_gej(&final, &aggctx->pubnonce_sum);
     secp256k1_fe_normalize_var(&final.x);
-    secp256k1_fe_get_b32(sig64 + 32, &final.x);
+    secp256k1_fe_get_b32(sig64, &final.x);
+    secp256k1_scalar_get_b32(sig64 + 32, &s);
     return 1;
 }
 
@@ -403,7 +403,7 @@ int secp256k1_aggsig_add_signatures_single(const secp256k1_context* ctx,
     /* Add signature portions together */
     secp256k1_scalar_set_int(&s, 0);
     for (i = 0; i < num_sigs; i++){
-        secp256k1_scalar_set_b32(&tmp, sigs[i], &overflow);
+        secp256k1_scalar_set_b32(&tmp, sigs[i] + 32, &overflow);
         if (overflow) {
             return 0;
         }
@@ -418,10 +418,10 @@ int secp256k1_aggsig_add_signatures_single(const secp256k1_context* ctx,
         secp256k1_gej_neg(&pubnonce_total_j, &pubnonce_total_j);
     }
 
-    secp256k1_scalar_get_b32(sig64, &s);
     secp256k1_ge_set_gej(&final, &pubnonce_total_j);
     secp256k1_fe_normalize_var(&final.x);
-    secp256k1_fe_get_b32(sig64 + 32, &final.x);
+    secp256k1_fe_get_b32(sig64, &final.x);
+    secp256k1_scalar_get_b32(sig64 + 32, &s);
     return 1;
 }
 
@@ -463,14 +463,14 @@ int secp256k1_aggsig_verify(const secp256k1_context* ctx, secp256k1_scratch_spac
         return 0;
     }
 
-    /* extract s */
-    secp256k1_scalar_set_b32(&g_sc, sig64, &overflow);
-    if (overflow) {
+    /* extract R */
+    if (!secp256k1_fe_set_b32(&r_x, sig64)) {
         return 0;
     }
 
-    /* extract R */
-    if (!secp256k1_fe_set_b32(&r_x, sig64 + 32)) {
+    /* extract s */
+    secp256k1_scalar_set_b32(&g_sc, sig64 + 32, &overflow);
+    if (overflow) {
         return 0;
     }
 
@@ -538,14 +538,14 @@ int secp256k1_aggsig_verify_single(
     ARG_CHECK(msg32 != NULL);
     ARG_CHECK(pubkey != NULL);
 
-    /* extract s */
-    secp256k1_scalar_set_b32(&g_sc, sig64, &overflow);
-    if (overflow) {
+    /* extract R */
+    if (!secp256k1_fe_set_b32(&r_x, sig64)) {
         return 0;
     }
 
-    /* extract R */
-    if (!secp256k1_fe_set_b32(&r_x, sig64 + 32)) {
+    /* extract s */
+    secp256k1_scalar_set_b32(&g_sc, sig64 + 32, &overflow);
+    if (overflow) {
         return 0;
     }
 
