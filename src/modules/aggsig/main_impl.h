@@ -69,16 +69,20 @@ static void secp256k1_compute_prehash(const secp256k1_context *ctx, unsigned cha
     size_t buflen = sizeof(buf);
     secp256k1_sha256 hasher;
     secp256k1_sha256_initialize(&hasher);
+
+    /* Encode nonce */
+    secp256k1_fe_get_b32(buf, nonce_ge_x);
+    secp256k1_sha256_write(&hasher, buf, 32);
+
     /* Encode pubkeys */
     for (i = 0; i < n_pubkeys; i++) {
         CHECK(secp256k1_ec_pubkey_serialize(ctx, buf, &buflen, &pubkeys[i], SECP256K1_EC_COMPRESSED));
         secp256k1_sha256_write(&hasher, buf, sizeof(buf));
     }
-    /* Encode nonce */
-    secp256k1_fe_get_b32(buf, nonce_ge_x);
-    secp256k1_sha256_write(&hasher, buf, 32);
+
     /* Encode message */
     secp256k1_sha256_write(&hasher, msghash32, 32);
+
     /* Finish */
     secp256k1_sha256_finalize(&hasher, output);
 }
