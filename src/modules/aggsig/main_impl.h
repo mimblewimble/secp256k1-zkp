@@ -134,7 +134,7 @@ int secp256k1_aggsig_generate_nonce_single(const secp256k1_context* ctx, secp256
     do {
         secp256k1_rfc6979_hmac_sha256_generate(rng, data, 32);
         secp256k1_scalar_set_b32(secnonce, data, &retry);
-        retry |= secp256k1_scalar_is_zero(secnonce);
+        retry = secp256k1_scalar_is_zero(secnonce);
     } while (retry); /* This branch true is cryptographically unreachable. Requires sha256_hmac output > Fp. */
     secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, pubnonce, secnonce);
     memset(data, 0, 32);  /* TODO proper clear */
