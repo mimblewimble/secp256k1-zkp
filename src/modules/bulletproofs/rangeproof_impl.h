@@ -469,7 +469,7 @@ static int secp256k1_bulletproof_rangeproof_prove_impl(
             return 0;
         }
     }
-    if (*plen < 128 + 64 + 1) { /* inner product argument will check and assign plen */
+    if (plen != NULL && *plen < 128 + 64 + 1) { /* inner product argument will check and assign plen */
         return 0;
     }
 
@@ -510,7 +510,7 @@ static int secp256k1_bulletproof_rangeproof_prove_impl(
     }
 
     secp256k1_scalar_chacha20(&alpha, &rho, nonce, 0);
-    secp256k1_scalar_chacha20(&tau1, &tau2, nonce, 1);
+    secp256k1_scalar_chacha20(&tau1, &tau2, private_nonce, 1);
 
     if (proof == NULL && tauxc == NULL && tge != NULL) {
         /* Multi-party bulletproof: export tau1j*G and tau2j*G */
@@ -673,6 +673,7 @@ static int secp256k1_bulletproof_rangeproof_prove_impl(
             secp256k1_scalar_mul(&tmps, &zsq, &blind[i]);
             secp256k1_scalar_add(&taux, &taux, &tmps);
             secp256k1_scalar_mul(&zsq, &zsq, &z);
+        }
     }
 
     if (proof == NULL) {
@@ -731,7 +732,6 @@ static int secp256k1_bulletproof_rangeproof_rewind_impl(uint64_t *value, secp256
     secp256k1_ge commitp, value_genp;
     secp256k1_gej rewind_commitj;
     int overflow, i;
-    unsigned char vbuf[8];
 
     if (plen < 64 + 128 + 1 || plen > SECP256K1_BULLETPROOF_MAX_PROOF) {
         return 0;

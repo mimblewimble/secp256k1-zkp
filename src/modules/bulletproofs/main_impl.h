@@ -235,7 +235,6 @@ int secp256k1_bulletproof_rangeproof_prove(
     secp256k1_generator_load(&value_genp, value_gen);
     for (i = 0; i < n_commits; i++) {
         int overflow;
-        secp256k1_gej commitj;
         secp256k1_scalar_set_b32(&blinds[i], blind[i], &overflow);
         if (overflow || secp256k1_scalar_is_zero(&blinds[i])) {
             return 0;
