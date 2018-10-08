@@ -170,7 +170,7 @@ static int secp256k1_bulletproof_rangeproof_verify_impl(const secp256k1_ecmult_c
     int same_generators = 1;
 
     /* sanity-check input */
-    if (POPCOUNT(nbits) != 1 || nbits > MAX_NBITS) {
+    if (secp256k1_popcountl(nbits) != 1 || nbits > MAX_NBITS) {
         return 0;
     }
     if (plen < 64 + 128 + 1 + 32) {  /* inner product argument will do a more precise check */
@@ -186,15 +186,13 @@ static int secp256k1_bulletproof_rangeproof_verify_impl(const secp256k1_ecmult_c
     ecmult_data = (secp256k1_bulletproof_vfy_ecmult_context *)secp256k1_scratch_alloc(scratch, n_proofs * sizeof(*ecmult_data));
     innp_ctx = (secp256k1_bulletproof_innerproduct_context *)secp256k1_scratch_alloc(scratch, n_proofs * sizeof(*innp_ctx));
 
-    /* In general you cannot memcmp secp256k1_ge's like this because their field
-     * elements may represent the same number differently. In this case it is ok
-     * because (a) a false positive here is no big deal, it will add one mult per
-     * proof to he giant ecmult_multi at the end but not change any semantics;
-     * and (b) typically this list of generators was deterministically decoded
-     * from a list of secp256k1_generators which have a compact encoding, so that 
-     * equal group elements actually will compare equal. */
+    /* Check if all generators are equal. If so, we can amortize all their scalar multiplications
+     * by them and save one scalar-ge multiplication per proof. */
+    VERIFY_CHECK(!secp256k1_ge_is_infinity(&value_gen[0]));
     for (i = 1; i < n_proofs; i++) {
-        if (memcmp(&value_gen[i], &value_gen[i - 1], sizeof(value_gen[i])) != 0) {
+        VERIFY_CHECK(!secp256k1_ge_is_infinity(&value_gen[i]));
+        if (!secp256k1_fe_equal_var(&value_gen[i].x, &value_gen[i - 1].x) ||
+            !secp256k1_fe_equal_var(&value_gen[i].y, &value_gen[i - 1].y)) {
             same_generators = 0;
         }
     }
@@ -209,50 +207,44 @@ static int secp256k1_bulletproof_rangeproof_verify_impl(const secp256k1_ecmult_c
         size_t j;
 
         /* Commit to all input data: min value, pedersen commit, asset generator, extra_commit */
-        secp256k1_sha256_initialize(&sha256);
-        secp256k1_sha256_write(&sha256, commit, 32);
-        for (j = 0; j < n_commits; j++) {
-            unsigned char vbuf[8];
-            uint64_t mv;
-            if (min_value != NULL && min_value[i] != NULL) {
-                mv = min_value[i][j];
-            } else {
-                mv = 0;
+        if (min_value != NULL && min_value[i] != NULL) {
+            unsigned char len[4];
+            secp256k1_sha256_initialize(&sha256);
+            secp256k1_sha256_write(&sha256, commit, 32);
+            len[0] = n_commits;
+            len[1] = n_commits >> 8;
+            len[2] = n_commits >> 16;
+            len[3] = n_commits >> 24;
+            secp256k1_sha256_write(&sha256, len, 4);
+            for (j = 0; j < n_commits; j++) {
+                unsigned char vbuf[8];
+                vbuf[0] = min_value[i][j];
+                vbuf[1] = min_value[i][j] >> 8;
+                vbuf[2] = min_value[i][j] >> 16;
+                vbuf[3] = min_value[i][j] >> 24;
+                vbuf[4] = min_value[i][j] >> 32;
+                vbuf[5] = min_value[i][j] >> 40;
+                vbuf[6] = min_value[i][j] >> 48;
+                vbuf[7] = min_value[i][j] >> 56;
+                secp256k1_sha256_write(&sha256, vbuf, 8);
             }
-
-            vbuf[0] = mv;
-            vbuf[1] = mv >> 8;
-            vbuf[2] = mv >> 16;
-            vbuf[3] = mv >> 24;
-            vbuf[4] = mv >> 32;
-            vbuf[5] = mv >> 40;
-            vbuf[6] = mv >> 48;
-            vbuf[7] = mv >> 56;
-            secp256k1_sha256_write(&sha256, vbuf, 8);
+            secp256k1_sha256_finalize(&sha256, commit);
         }
-
-        if (extra_commit != NULL && extra_commit[i] != NULL) {
-            unsigned char len_buf[4];
-            len_buf[0] = extra_commit_len[i];
-            len_buf[1] = extra_commit_len[i] >> 8;
-            len_buf[2] = extra_commit_len[i] >> 16;
-            len_buf[3] = extra_commit_len[i] >> 24;
-
-            secp256k1_sha256_write(&sha256, len_buf, 4);
-            secp256k1_sha256_write(&sha256, extra_commit[i], extra_commit_len[i]);
-        } else {
-            unsigned char len_buf[4] = { 0, 0, 0, 0 };
-            secp256k1_sha256_write(&sha256, len_buf, 4);
-        }
-        secp256k1_sha256_finalize(&sha256, commit);
-
         for (j = 0; j < n_commits; j++) {
             secp256k1_bulletproof_update_commit(commit, &commitp[i][j], &value_gen[i]);
         }
+        if (extra_commit != NULL && extra_commit[i] != NULL) {
+            secp256k1_sha256_initialize(&sha256);
+            secp256k1_sha256_write(&sha256, commit, 32);
+            secp256k1_sha256_write(&sha256, extra_commit[i], extra_commit_len[i]);
+            secp256k1_sha256_finalize(&sha256, commit);
+        }
 
         /* Compute y, z, x */
-        secp256k1_bulletproof_deserialize_point(&age, &proof[i][64], 0, 4);
-        secp256k1_bulletproof_deserialize_point(&sge, &proof[i][64], 1, 4);
+        if (!secp256k1_bulletproof_deserialize_point(&age, &proof[i][64], 0, 4) ||
+            !secp256k1_bulletproof_deserialize_point(&sge, &proof[i][64], 1, 4)) {
+            return 0;
+        }
 
         secp256k1_bulletproof_update_commit(commit, &age, &sge);
         secp256k1_scalar_set_b32(&ecmult_data[i].y, commit, &overflow);
@@ -267,8 +259,10 @@ static int secp256k1_bulletproof_rangeproof_verify_impl(const secp256k1_ecmult_c
             return 0;
         }
 
-        secp256k1_bulletproof_deserialize_point(&ecmult_data[i].t1, &proof[i][64], 2, 4);
-        secp256k1_bulletproof_deserialize_point(&ecmult_data[i].t2, &proof[i][64], 3, 4);
+        if (!secp256k1_bulletproof_deserialize_point(&ecmult_data[i].t1, &proof[i][64], 2, 4) ||
+            !secp256k1_bulletproof_deserialize_point(&ecmult_data[i].t2, &proof[i][64], 3, 4)) {
+            return 0;
+        }
 
         secp256k1_bulletproof_update_commit(commit, &ecmult_data[i].t1, &ecmult_data[i].t2);
         secp256k1_scalar_set_b32(&ecmult_data[i].x, commit, &overflow);
@@ -437,13 +431,12 @@ static int secp256k1_bulletproof_abgh_callback(secp256k1_scalar *sc, secp256k1_g
 static int secp256k1_bulletproof_rangeproof_prove_impl(
     const secp256k1_ecmult_context *ecmult_ctx, secp256k1_scratch *scratch, 
     unsigned char *proof, size_t *plen, 
-    unsigned char *tauxc, secp256k1_ge *tge, 
-    const size_t nbits, const uint64_t *value, const uint64_t *min_value, 
+    unsigned char *tauxc, secp256k1_ge *tge,
+    const size_t nbits, const uint64_t *value, const uint64_t *min_value,
     const secp256k1_scalar *blind, const secp256k1_ge *commitp, size_t n_commits, 
     const secp256k1_ge *value_gen, const secp256k1_bulletproof_generators *gens, 
-    const unsigned char *nonce, const unsigned char *private_nonce, 
-    const unsigned char *extra_commit, size_t extra_commit_len, const unsigned char *message
-) {
+    const unsigned char *nonce, const unsigned char *private_nonce,
+    const unsigned char *extra_commit, size_t extra_commit_len, const unsigned char *message) {
     secp256k1_bulletproof_lr_generator lr_gen;
     secp256k1_bulletproof_abgh_data abgh_data;
     secp256k1_scalar zero;
@@ -461,10 +454,10 @@ static int secp256k1_bulletproof_rangeproof_prove_impl(
     size_t i, j;
     int overflow;
     unsigned char vals_bytes[32] = {0};
-    /* Inner product proof variables */
+    /* inner product proof variables */
     secp256k1_ge out_pt[4];
 
-    if (POPCOUNT(nbits) != 1 || nbits > MAX_NBITS) {
+    if (secp256k1_popcountl(nbits) != 1 || nbits > MAX_NBITS) {
         return 0;
     }
     for (i = 0; i < n_commits; i++) {
@@ -476,57 +469,48 @@ static int secp256k1_bulletproof_rangeproof_prove_impl(
             return 0;
         }
     }
-    if (plen != NULL && *plen < 128 + 64 + 1) { /* Inner product argument will check and assign plen */
+    if (*plen < 128 + 64 + 1) { /* inner product argument will check and assign plen */
         return 0;
     }
 
     secp256k1_scalar_clear(&zero);
 
-    secp256k1_sha256_initialize(&sha256);
-    secp256k1_sha256_write(&sha256, commit, 32);
     /* Commit to all input data: min value, pedersen commit, asset generator, extra_commit */
-    for (i = 0; i < n_commits; i++) {
-        unsigned char vbuf[8];
-        uint64_t mv;
-
-        if (min_value != NULL) {
-            mv = min_value[i];
-        } else {
-            mv = 0;
+    if (min_value != NULL) {
+        unsigned char len[4];
+        secp256k1_sha256_initialize(&sha256);
+        secp256k1_sha256_write(&sha256, commit, 32);
+        len[0] = n_commits;
+        len[1] = n_commits >> 8;
+        len[2] = n_commits >> 16;
+        len[3] = n_commits >> 24;
+        secp256k1_sha256_write(&sha256, len, 4);
+        for (i = 0; i < n_commits; i++) {
+            unsigned char vbuf[8];
+            vbuf[0] = min_value[i];
+            vbuf[1] = min_value[i] >> 8;
+            vbuf[2] = min_value[i] >> 16;
+            vbuf[3] = min_value[i] >> 24;
+            vbuf[4] = min_value[i] >> 32;
+            vbuf[5] = min_value[i] >> 40;
+            vbuf[6] = min_value[i] >> 48;
+            vbuf[7] = min_value[i] >> 56;
+            secp256k1_sha256_write(&sha256, vbuf, 8);
         }
-
-        vbuf[0] = mv;
-        vbuf[1] = mv >> 8;
-        vbuf[2] = mv >> 16;
-        vbuf[3] = mv >> 24;
-        vbuf[4] = mv >> 32;
-        vbuf[5] = mv >> 40;
-        vbuf[6] = mv >> 48;
-        vbuf[7] = mv >> 56;
-        secp256k1_sha256_write(&sha256, vbuf, 8);
+        secp256k1_sha256_finalize(&sha256, commit);
     }
-
-    if (extra_commit != NULL) {
-        unsigned char len_buf[4];
-        len_buf[0] = extra_commit_len;
-        len_buf[1] = extra_commit_len >> 8;
-        len_buf[2] = extra_commit_len >> 16;
-        len_buf[3] = extra_commit_len >> 24;
-
-        secp256k1_sha256_write(&sha256, len_buf, 4);
-        secp256k1_sha256_write(&sha256, extra_commit, extra_commit_len);
-    } else {
-        unsigned char len_buf[4] = { 0, 0, 0, 0 };
-        secp256k1_sha256_write(&sha256, len_buf, 4);
-    }
-    secp256k1_sha256_finalize(&sha256, commit);
-
     for (i = 0; i < n_commits; i++) {
         secp256k1_bulletproof_update_commit(commit, &commitp[i], value_gen); /* TODO be less stupid about this */
     }
+    if (extra_commit != NULL) {
+        secp256k1_sha256_initialize(&sha256);
+        secp256k1_sha256_write(&sha256, commit, 32);
+        secp256k1_sha256_write(&sha256, extra_commit, extra_commit_len);
+        secp256k1_sha256_finalize(&sha256, commit);
+    }
 
     secp256k1_scalar_chacha20(&alpha, &rho, nonce, 0);
-    secp256k1_scalar_chacha20(&tau1, &tau2, private_nonce, 1);
+    secp256k1_scalar_chacha20(&tau1, &tau2, nonce, 1);
 
     if (proof == NULL && tauxc == NULL && tge != NULL) {
         /* Multi-party bulletproof: export tau1j*G and tau2j*G */
@@ -539,7 +523,7 @@ static int secp256k1_bulletproof_rangeproof_prove_impl(
         return 1;
     }
 
-    /* Encrypt value and optional message into alpha, so it will be recoverable from -mu by someone who knows `nonce` */
+    /* Encrypt value into alpha, so it will be recoverable from -mu by someone who knows `nonce` */
     if (n_commits == 1) {
         secp256k1_scalar vals;
         secp256k1_scalar_set_u64(&vals, value[0]);
@@ -584,7 +568,7 @@ static int secp256k1_bulletproof_rangeproof_prove_impl(
         }
     }
 
-    /* Get challenges y and z */
+    /* get challenges y and z */
     secp256k1_ge_set_gej(&out_pt[0], &aj);
     secp256k1_ge_set_gej(&out_pt[1], &sj);
 
@@ -648,15 +632,14 @@ static int secp256k1_bulletproof_rangeproof_prove_impl(
     secp256k1_scalar_negate(&t2, &t2);
     secp256k1_scalar_add(&t2, &t2, &t1);
 
-    /* Compute Ti for i = 1,2 */
+    /* Compute Ti = t_i*A + tau_i*G for i = 1,2 */
     secp256k1_ecmult_const(&tmpj, value_gen, &t1, 256);
     if (tge == NULL) {
         /* Normal bulletproof: T1=t1*A + tau1*G */
         secp256k1_ge_set_gej(&out_pt[2], &tmpj);
         secp256k1_ecmult_const(&tmpj, &gens->blinding_gen[0], &tau1, 256);
         secp256k1_gej_add_ge(&tmpj, &tmpj, &out_pt[2]);
-    }
-    else {
+    } else {
         /* Multi-party bulletproof: T1=t1*A + sumj tau1j*G */
         secp256k1_gej_add_ge(&tmpj, &tmpj, &tge[0]);
     }
@@ -668,14 +651,12 @@ static int secp256k1_bulletproof_rangeproof_prove_impl(
         secp256k1_ge_set_gej(&out_pt[3], &tmpj);
         secp256k1_ecmult_const(&tmpj, &gens->blinding_gen[0], &tau2, 256);
         secp256k1_gej_add_ge(&tmpj, &tmpj, &out_pt[3]);
-    }
-    else {
+    } else {
         /* Multi-party bulletproof: T2=t2*A + sumj tau2j*G */
         secp256k1_gej_add_ge(&tmpj, &tmpj, &tge[1]);
     }
     secp256k1_ge_set_gej(&out_pt[3], &tmpj);
 
-    /* Get challenge x */
     secp256k1_bulletproof_update_commit(commit, &out_pt[2], &out_pt[3]);
     secp256k1_scalar_set_b32(&x, commit, &overflow);
     if (overflow || secp256k1_scalar_is_zero(&x)) {
@@ -684,7 +665,7 @@ static int secp256k1_bulletproof_rangeproof_prove_impl(
     secp256k1_scalar_sqr(&xsq, &x);
 
     if (proof == NULL || tauxc == NULL) {
-        /* Compute taux and mu */
+        /* compute tau_x and mu */
         secp256k1_scalar_mul(&taux, &tau1, &x);
         secp256k1_scalar_mul(&tmps, &tau2, &xsq);
         secp256k1_scalar_add(&taux, &taux, &tmps);
@@ -692,7 +673,6 @@ static int secp256k1_bulletproof_rangeproof_prove_impl(
             secp256k1_scalar_mul(&tmps, &zsq, &blind[i]);
             secp256k1_scalar_add(&taux, &taux, &tmps);
             secp256k1_scalar_mul(&zsq, &zsq, &z);
-        }
     }
 
     if (proof == NULL) {
@@ -770,45 +750,34 @@ static int secp256k1_bulletproof_rangeproof_rewind_impl(uint64_t *value, secp256
     secp256k1_scalar_chacha20(&alpha, &rho, nonce, 0);
     secp256k1_scalar_chacha20(&tau1, &tau2, nonce, 1);
 
-    secp256k1_sha256_initialize(&sha256);
-    secp256k1_sha256_write(&sha256, commit, 32);
+    if (min_value > 0) {
+        unsigned char vbuf[8];
+        const unsigned char len[4] = { 1, 0, 0, 0 };
+        vbuf[0] = min_value;
+        vbuf[1] = min_value >> 8;
+        vbuf[2] = min_value >> 16;
+        vbuf[3] = min_value >> 24;
+        vbuf[4] = min_value >> 32;
+        vbuf[5] = min_value >> 40;
+        vbuf[6] = min_value >> 48;
+        vbuf[7] = min_value >> 56;
+        secp256k1_sha256_initialize(&sha256);
+        secp256k1_sha256_write(&sha256, commit, 32);
+        secp256k1_sha256_write(&sha256, len, 4);
+        secp256k1_sha256_write(&sha256, vbuf, 8);
+        secp256k1_sha256_finalize(&sha256, commit);
+    }
 
-    vbuf[0] = min_value;
-    vbuf[1] = min_value >> 8;
-    vbuf[2] = min_value >> 16;
-    vbuf[3] = min_value >> 24;
-    vbuf[4] = min_value >> 32;
-    vbuf[5] = min_value >> 40;
-    vbuf[6] = min_value >> 48;
-    vbuf[7] = min_value >> 56;
-    secp256k1_sha256_write(&sha256, vbuf, 8);
+    secp256k1_pedersen_commitment_load(&commitp, pcommit);
+    secp256k1_generator_load(&value_genp, value_gen);
+    secp256k1_bulletproof_update_commit(commit, &commitp, &value_genp);
 
     if (extra_commit != NULL) {
-        unsigned char len_buf[4];
-        len_buf[0] = extra_commit_len;
-        len_buf[1] = extra_commit_len >> 8;
-        len_buf[2] = extra_commit_len >> 16;
-        len_buf[3] = extra_commit_len >> 24;
-
-        secp256k1_sha256_write(&sha256, len_buf, 4);
+        secp256k1_sha256_initialize(&sha256);
+        secp256k1_sha256_write(&sha256, commit, 32);
         secp256k1_sha256_write(&sha256, extra_commit, extra_commit_len);
-    } else {
-        unsigned char len_buf[4] = { 0, 0, 0, 0 };
-        secp256k1_sha256_write(&sha256, len_buf, 4);
+        secp256k1_sha256_finalize(&sha256, commit);
     }
-    secp256k1_sha256_finalize(&sha256, commit);
-
-    /* This breaks the abstraction of both the Pedersen commitment and the generator
-     * type by directly reading the parity bit and x-coordinate from the data. But
-     * the alternative using the _load functions is to do two full point decompression,
-     * and in my benchmarks we save ~80% of the rewinding time by avoiding this. -asp */
-    lrparity = 2 * !!(pcommit->data[0] & 1) + !!(value_gen->data[0] & 1);
-    secp256k1_sha256_initialize(&sha256);
-    secp256k1_sha256_write(&sha256, commit, 32);
-    secp256k1_sha256_write(&sha256, &lrparity, 1);
-    secp256k1_sha256_write(&sha256, &pcommit->data[1], 32);
-    secp256k1_sha256_write(&sha256, &value_gen->data[1], 32);
-    secp256k1_sha256_finalize(&sha256, commit);
 
     /* Extract A and S to compute y and z */
     lrparity = 2 * !!(proof[64] & 1) + !!(proof[64] & 2);
@@ -876,10 +845,6 @@ static int secp256k1_bulletproof_rangeproof_rewind_impl(uint64_t *value, secp256
     secp256k1_scalar_inverse_var(&z, &z);
     secp256k1_scalar_mul(blind, &taux, &z);
     secp256k1_scalar_negate(blind, blind);
-
-    /* Check blinding factor */
-    secp256k1_pedersen_commitment_load(&commitp, pcommit);
-    secp256k1_generator_load(&value_genp, value_gen);
 
     secp256k1_pedersen_ecmult(&rewind_commitj, blind, *value, &value_genp, blind_gen);
     secp256k1_gej_neg(&rewind_commitj, &rewind_commitj);

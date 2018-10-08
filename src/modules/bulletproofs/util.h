@@ -30,6 +30,36 @@ SECP256K1_INLINE static size_t secp256k1_floor_lg(size_t n) {
     }
 }
 
+SECP256K1_INLINE static size_t secp256k1_popcountl(unsigned long x) {
+#ifdef HAVE_BUILTIN_POPCOUNTL
+    return __builtin_popcountl(x);
+#else
+    size_t ret = 0;
+    size_t i;
+    for (i = 0; i < 64; i++) {
+        ret += x & 1;
+        x >>= 1;
+    }
+    return ret;
+#endif
+}
+
+SECP256K1_INLINE static size_t secp256k1_ctzl(unsigned long x) {
+#ifdef HAVE_BUILTIN_CTZL
+    return __builtin_ctzl(x);
+#else
+    size_t i;
+    for (i = 0; i < 64; i++) {
+        if (x & (1ull << i)) {
+            return i;
+        }
+    }
+    /* If no bits are set, the result is __builtin_ctzl is undefined,
+     * so we can return whatever we want here. */
+    return 0;
+#endif
+}
+
 static void secp256k1_scalar_dot_product(secp256k1_scalar *r, const secp256k1_scalar *a, const secp256k1_scalar *b, size_t n) {
     secp256k1_scalar_clear(r);
     while(n--) {
@@ -82,15 +112,19 @@ SECP256K1_INLINE static void secp256k1_bulletproof_serialize_points(unsigned cha
     }
 }
 
-SECP256K1_INLINE static void secp256k1_bulletproof_deserialize_point(secp256k1_ge *pt, const unsigned char *data, size_t i, size_t n) {
+SECP256K1_INLINE static int secp256k1_bulletproof_deserialize_point(secp256k1_ge *pt, const unsigned char *data, size_t i, size_t n) {
     const size_t bitveclen = (n + 7) / 8;
     const size_t offset = bitveclen + i*32;
     secp256k1_fe fe;
 
     secp256k1_fe_set_b32(&fe, &data[offset]);
-    secp256k1_ge_set_xquad(pt, &fe);
-    if (data[i / 8] & (1 << (i % 8))) {
-        secp256k1_ge_neg(pt, pt);
+    if (secp256k1_ge_set_xquad(pt, &fe)) {
+        if (data[i / 8] & (1 << (i % 8))) {
+            secp256k1_ge_neg(pt, pt);
+        }
+        return 1;
+    } else {
+        return 0;
     }
 }
 

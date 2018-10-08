@@ -208,6 +208,19 @@ AC_COMPILE_IFELSE([AC_LANG_SOURCE([[void myfunc() {__builtin_popcount(0);}]])],
     [ AC_MSG_RESULT([no])
     ])
 
+AC_MSG_CHECKING([for __builtin_popcountl])
+AC_COMPILE_IFELSE([AC_LANG_SOURCE([[void myfunc() {__builtin_popcountl(0);}]])],
+    [ AC_MSG_RESULT([yes]);AC_DEFINE(HAVE_BUILTIN_POPCOUNTL,1,[Define this symbol if __builtin_popcountl is available]) ],
+    [ AC_MSG_RESULT([no])
+    ])
+
+AC_MSG_CHECKING([for __builtin_ctzl])
+AC_COMPILE_IFELSE([AC_LANG_SOURCE([[void myfunc() {__builtin_ctzl(0);}]])],
+    [ AC_MSG_RESULT([yes]);AC_DEFINE(HAVE_BUILTIN_CTZL,1,[Define this symbol if __builtin_ctzl is available]) ],
+    [ AC_MSG_RESULT([no])
+    ])
+
+
 if test x"$use_ecmult_static_precomputation" != x"no"; then
   save_cross_compiling=$cross_compiling
   cross_compiling=no

@@ -15,14 +15,12 @@
 #include "scalar.h"
 
 /** Standard secp256k1 generator */
-const secp256k1_generator secp256k1_generator_const_g = {
-    { 0x0a,
-      0x79, 0xbe, 0x66, 0x7e, 0xf9, 0xdc, 0xbb, 0xac,
-      0x55, 0xa0, 0x62, 0x95, 0xce, 0x87, 0x0b, 0x07,
-      0x02, 0x9b, 0xfc, 0xdb, 0x2d, 0xce, 0x28, 0xd9,
-      0x59, 0xf2, 0x81, 0x5b, 0x16, 0xf8, 0x17, 0x98
-    }
-};
+const secp256k1_generator secp256k1_generator_const_g = {{
+    0x79, 0xbe, 0x66, 0x7e, 0xf9, 0xdc, 0xbb, 0xac, 0x55, 0xa0, 0x62, 0x95, 0xce, 0x87, 0x0b, 0x07,
+    0x02, 0x9b, 0xfc, 0xdb, 0x2d, 0xce, 0x28, 0xd9, 0x59, 0xf2, 0x81, 0x5b, 0x16, 0xf8, 0x17, 0x98,
+    0x48, 0x3a, 0xda, 0x77, 0x26, 0xa3, 0xc4, 0x65, 0x5d, 0xa4, 0xfb, 0xfc, 0x0e, 0x11, 0x08, 0xa8,
+    0xfd, 0x17, 0xb4, 0x48, 0xa6, 0x85, 0x54, 0x19, 0x9c, 0x47, 0xd0, 0x8f, 0xfb, 0x10, 0xd4, 0xb8
+}};
 
 /** Alternate secp256k1 generator, used in Elements Alpha.
  *  Computed as the hash of the above G, DER-encoded with 0x04 (uncompressed pubkey) as its flag byte.
@@ -31,46 +29,63 @@ const secp256k1_generator secp256k1_generator_const_g = {
  *  G_bytes = '0479be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8'.decode('hex')
  *  H = C.lift_x(int(hashlib.sha256(G_bytes).hexdigest(),16))
  */
-const secp256k1_generator secp256k1_generator_const_h = {
-    { 0x0b,
-      0x50, 0x92, 0x9b, 0x74, 0xc1, 0xa0, 0x49, 0x54,
-      0xb7, 0x8b, 0x4b, 0x60, 0x35, 0xe9, 0x7a, 0x5e,
-      0x07, 0x8a, 0x5a, 0x0f, 0x28, 0xec, 0x96, 0xd5,
-      0x47, 0xbf, 0xee, 0x9a, 0xce, 0x80, 0x3a, 0xc0
-    }
-};
+const secp256k1_generator secp256k1_generator_const_h = {{
+    0x50, 0x92, 0x9b, 0x74, 0xc1, 0xa0, 0x49, 0x54, 0xb7, 0x8b, 0x4b, 0x60, 0x35, 0xe9, 0x7a, 0x5e,
+    0x07, 0x8a, 0x5a, 0x0f, 0x28, 0xec, 0x96, 0xd5, 0x47, 0xbf, 0xee, 0x9a, 0xce, 0x80, 0x3a, 0xc0,
+    0x31, 0xd3, 0xc6, 0x86, 0x39, 0x73, 0x92, 0x6e, 0x04, 0x9e, 0x63, 0x7c, 0xb1, 0xb5, 0xf4, 0x0a,
+    0x36, 0xda, 0xc2, 0x8a, 0xf1, 0x76, 0x69, 0x68, 0xc3, 0x0c, 0x23, 0x13, 0xf3, 0xa3, 0x89, 0x04
+}};
 
 static void secp256k1_generator_load(secp256k1_ge* ge, const secp256k1_generator* gen) {
-    secp256k1_fe fe;
-    secp256k1_fe_set_b32(&fe, &gen->data[1]);
-    secp256k1_ge_set_xquad(ge, &fe);
-    if (gen->data[0] & 1) {
-        secp256k1_ge_neg(ge, ge);
-    }
+    int succeed;
+    succeed = secp256k1_fe_set_b32(&ge->x, &gen->data[0]);
+    VERIFY_CHECK(succeed != 0);
+    succeed = secp256k1_fe_set_b32(&ge->y, &gen->data[32]);
+    VERIFY_CHECK(succeed != 0);
+    ge->infinity = 0;
+    (void) succeed;
 }
 
-static void secp256k1_generator_save(secp256k1_generator* commit, secp256k1_ge* ge) {
-    secp256k1_fe_normalize(&ge->x);
-    secp256k1_fe_get_b32(&commit->data[1], &ge->x);
-    commit->data[0] = 11 ^ secp256k1_fe_is_quad_var(&ge->y);
+static void secp256k1_generator_save(secp256k1_generator *gen, secp256k1_ge* ge) {
+    VERIFY_CHECK(!secp256k1_ge_is_infinity(ge));
+    secp256k1_fe_normalize_var(&ge->x);
+    secp256k1_fe_normalize_var(&ge->y);
+    secp256k1_fe_get_b32(&gen->data[0], &ge->x);
+    secp256k1_fe_get_b32(&gen->data[32], &ge->y);
 }
 
 int secp256k1_generator_parse(const secp256k1_context* ctx, secp256k1_generator* gen, const unsigned char *input) {
+    secp256k1_fe x;
+    secp256k1_ge ge;
+
     VERIFY_CHECK(ctx != NULL);
     ARG_CHECK(gen != NULL);
     ARG_CHECK(input != NULL);
-    if ((input[0] & 0xFE) != 10) {
+
+    if ((input[0] & 0xFE) != 10 ||
+        !secp256k1_fe_set_b32(&x, &input[1]) ||
+        !secp256k1_ge_set_xquad(&ge, &x)) {
         return 0;
     }
-    memcpy(gen->data, input, sizeof(gen->data));
+    if (input[0] & 1) {
+        secp256k1_ge_neg(&ge, &ge);
+    }
+    secp256k1_generator_save(gen, &ge);
     return 1;
 }
 
 int secp256k1_generator_serialize(const secp256k1_context* ctx, unsigned char *output, const secp256k1_generator* gen) {
+    secp256k1_ge ge;
+
     VERIFY_CHECK(ctx != NULL);
     ARG_CHECK(output != NULL);
     ARG_CHECK(gen != NULL);
-    memcpy(output, gen->data, sizeof(gen->data));
+
+    secp256k1_generator_load(&ge, gen);
+
+    output[0] = 11 ^ secp256k1_fe_is_quad_var(&ge.y);
+    secp256k1_fe_normalize_var(&ge.x);
+    secp256k1_fe_get_b32(&output[1], &ge.x);
     return 1;
 }
 

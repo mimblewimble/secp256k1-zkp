@@ -13,9 +13,6 @@
 #include "modules/bulletproofs/main_impl.h"
 #include "modules/bulletproofs/util.h"
 
-#define POPCOUNT(x)	(__builtin_popcountl((unsigned long)(x)))  /* TODO make these portable */
-#define CTZ(x)	(__builtin_ctzl((unsigned long)(x)))
-
 /* Number of scalars that should remain at the end of a recursive proof. The paper
  * uses 2, by reducing the scalars as far as possible. We stop one recursive step
  * early, trading two points (L, R) for two scalars, which reduces verification
@@ -113,7 +110,7 @@ size_t secp256k1_bulletproof_innerproduct_proof_length(size_t n) {
     if (n < IP_AB_SCALARS / 2) {
         return 32 * (1 + 2 * n);
     } else {
-        size_t bit_count = POPCOUNT(n);
+        size_t bit_count = secp256k1_popcountl(n);
         size_t log = secp256k1_floor_lg(2 * n / IP_AB_SCALARS);
         return 32 * (1 + 2 * (bit_count - 1 + log) + IP_AB_SCALARS) + (2*log + 7) / 8;
     }
@@ -180,7 +177,7 @@ static int secp256k1_bulletproof_innerproduct_vfy_ecmult_callback(secp256k1_scal
              * Note that `ctx->proof[i].xcache[0]` will always equal `-a_1 * prod_{i=1}^{n-1} x_i^-2`,
              * and we expect the caller to have set this.
              */
-            const size_t cache_idx = POPCOUNT(idx);
+            const size_t cache_idx = secp256k1_popcountl(idx);
             secp256k1_scalar term;
             VERIFY_CHECK(cache_idx < SECP256K1_BULLETPROOF_MAX_DEPTH);
             /* For the special case `cache_idx == 0` (which is true iff `idx == 0`) there is nothing to do. */
@@ -205,8 +202,8 @@ static int secp256k1_bulletproof_innerproduct_vfy_ecmult_callback(secp256k1_scal
                     if (idx == ctx->vec_len) {
                         secp256k1_scalar yinvn = ctx->proof[i].proof->yinv;
                         size_t j;
-                        prev_cache_idx = POPCOUNT(idx - 1);
-                        for (j = 0; j < (size_t) CTZ(idx) - lg_grouping; j++) {
+                        prev_cache_idx = secp256k1_popcountl(idx - 1);
+                        for (j = 0; j < (size_t) secp256k1_ctzl(idx) - lg_grouping; j++) {
                             secp256k1_scalar_mul(&ctx->proof[i].xsqinvy[j], &ctx->proof[i].xsqinv[j], &yinvn);
                             secp256k1_scalar_sqr(&yinvn, &yinvn);
                         }
@@ -230,10 +227,10 @@ static int secp256k1_bulletproof_innerproduct_vfy_ecmult_callback(secp256k1_scal
                  * of `j`, we see that this should be "the least significant bit that's 1 in `i` but not `i-1`."
                  * In other words, it is the number of trailing 0 bits in the index `i`. */
                 } else if (idx < ctx->vec_len) {
-                    const size_t xsq_idx = CTZ(idx);
+                    const size_t xsq_idx = secp256k1_ctzl(idx);
                     secp256k1_scalar_mul(&ctx->proof[i].xcache[cache_idx], &ctx->proof[i].xcache[cache_idx - 1], &ctx->proof[i].xsq[xsq_idx]);
                 } else {
-                    const size_t xsqinv_idx = CTZ(idx);
+                    const size_t xsqinv_idx = secp256k1_ctzl(idx);
                     secp256k1_scalar_mul(&ctx->proof[i].xcache[cache_idx], &ctx->proof[i].xcache[cache_idx - 1], &ctx->proof[i].xsqinvy[xsqinv_idx]);
                 }
             }
@@ -244,8 +241,8 @@ static int secp256k1_bulletproof_innerproduct_vfy_ecmult_callback(secp256k1_scal
              * that has exactly one 0-bit, i.e. which is a product of all `x_i`s and one `x_k^-1`. By
              * multiplying that by the special value `prod_{i=1}^n x_i^-1` we obtain simply `x_k^-2`.
              * We expect the caller to give us this special value in `ctx->proof[i].xsqinv_mask`. */
-            if (idx < ctx->vec_len / grouping && POPCOUNT(idx) == ctx->lg_vec_len - 1) {
-                const size_t xsqinv_idx = CTZ(~idx);
+            if (idx < ctx->vec_len / grouping && secp256k1_popcountl(idx) == ctx->lg_vec_len - 1) {
+                const size_t xsqinv_idx = secp256k1_ctzl(~idx);
                 secp256k1_scalar_mul(&ctx->proof[i].xsqinv[xsqinv_idx], &ctx->proof[i].xcache[cache_idx], &ctx->proof[i].xsqinv_mask);
             }
 
@@ -267,12 +264,14 @@ static int secp256k1_bulletproof_innerproduct_vfy_ecmult_callback(secp256k1_scal
         size_t real_idx = idx - 2 * ctx->vec_len;
         const size_t proof_idx = real_idx / (2 * ctx->lg_vec_len);
         real_idx = real_idx % (2 * ctx->lg_vec_len);
-        secp256k1_bulletproof_deserialize_point(
+        if (!secp256k1_bulletproof_deserialize_point(
             pt,
             ctx->proof[proof_idx].serialized_lr,
             real_idx,
             2 * ctx->lg_vec_len
-        );
+        )) {
+            return 0;
+        }
         if (idx % 2 == 0) {
             *sc = ctx->proof[proof_idx].xsq[real_idx / 2];
         } else {

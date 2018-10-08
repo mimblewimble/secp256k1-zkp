@@ -142,8 +142,8 @@ SECP256K1_WARN_UNUSED_RESULT SECP256K1_API int secp256k1_bulletproof_rangeproof_
  *  Args:       ctx: pointer to a context object initialized for signing and verification (cannot be NULL)
  *          scratch: scratch space with enough memory for verification (cannot be NULL)
  *             gens: generator set with at least 2*nbits*n_commits many generators (cannot be NULL)
- *  Out:      proof: byte-serialized rangeproof
- *  In/out:    plen: pointer to size of `proof`, to be replaced with actual length of proof
+ *  Out:      proof: byte-serialized rangeproof (cannot be NULL)
+ *  In/out:    plen: pointer to size of `proof`, to be replaced with actual length of proof (cannot be NULL)
  *            tau_x: only for multi-party; 32-byte, output in second step or input in final step
  *            t_one: only for multi-party; public key, output in first step or input for the others
  *            t_two: only for multi-party; public key, output in first step or input for the others
