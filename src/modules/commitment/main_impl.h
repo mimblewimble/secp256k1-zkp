@@ -264,7 +264,7 @@ int secp256k1_pedersen_blind_generator_blind_sum(const secp256k1_context* ctx, c
 }
 
 /* Generates a blinding key that contains a hashed switch commitment. */
-int secp256k1_blind_switch(const secp256k1_context* ctx, unsigned char *blind_switch, const unsigned char *blind, uint64_t value, const secp256k1_generator* value_gen, const secp256k1_generator* blind_gen, const unsigned char *switch_pubkey_raw) {
+int secp256k1_blind_switch(const secp256k1_context* ctx, unsigned char* blind_switch, const unsigned char* blind, uint64_t value, const secp256k1_generator* value_gen, const secp256k1_generator* blind_gen, const secp256k1_pubkey* switch_pubkey) {
     secp256k1_sha256 hasher;
     secp256k1_pedersen_commitment commit;
     unsigned char buf[33];
@@ -279,7 +279,7 @@ int secp256k1_blind_switch(const secp256k1_context* ctx, unsigned char *blind_sw
     ARG_CHECK(blind != NULL);
     ARG_CHECK(value_gen != NULL);
     ARG_CHECK(blind_gen != NULL);
-    ARG_CHECK(switch_pubkey_raw != NULL);
+    ARG_CHECK(switch_pubkey != NULL);
 
     secp256k1_sha256_initialize(&hasher);
     if (secp256k1_pedersen_commit(ctx, &commit, blind, value, value_gen, blind_gen) != 1) {
@@ -289,9 +289,8 @@ int secp256k1_blind_switch(const secp256k1_context* ctx, unsigned char *blind_sw
         return 0;
     }
     secp256k1_sha256_write(&hasher, buf, buflen);
-    if (secp256k1_ec_pubkey_parse(ctx, &tmp_pubkey, switch_pubkey_raw, buflen) != 1) {
-        return 0;
-    }
+
+    memcpy(&tmp_pubkey, switch_pubkey, sizeof(*switch_pubkey));
     if (secp256k1_ec_pubkey_tweak_mul(ctx, &tmp_pubkey, blind) != 1) {
         return 0;
     }
