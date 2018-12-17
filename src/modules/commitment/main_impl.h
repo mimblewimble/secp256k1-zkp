@@ -282,6 +282,7 @@ int secp256k1_blind_switch(const secp256k1_context* ctx, unsigned char* blind_sw
     ARG_CHECK(switch_pubkey != NULL);
 
     secp256k1_sha256_initialize(&hasher);
+    /* xG + vH */
     if (secp256k1_pedersen_commit(ctx, &commit, blind, value, value_gen, blind_gen) != 1) {
         return 0;
     }
@@ -290,6 +291,7 @@ int secp256k1_blind_switch(const secp256k1_context* ctx, unsigned char* blind_sw
     }
     secp256k1_sha256_write(&hasher, buf, buflen);
 
+    /* xJ */
     memcpy(&tmp_pubkey, switch_pubkey, sizeof(*switch_pubkey));
     if (secp256k1_ec_pubkey_tweak_mul(ctx, &tmp_pubkey, blind) != 1) {
         return 0;
@@ -299,17 +301,20 @@ int secp256k1_blind_switch(const secp256k1_context* ctx, unsigned char* blind_sw
     }
     secp256k1_sha256_write(&hasher, buf, buflen);
     secp256k1_sha256_finalize(&hasher, hashed);
-    secp256k1_scalar_set_b32(&blind_switch_scalar, hashed, &overflow);
+    secp256k1_scalar_set_b32(&blind_switch_scalar, hashed, &overflow); /* hash(xG+vH||xJ) */
     if (overflow) {
+        secp256k1_scalar_clear(&blind_switch_scalar);
         return 0;
     }
     secp256k1_scalar_set_b32(&tmp_scalar, blind, &overflow);
     if (overflow) {
+        secp256k1_scalar_clear(&blind_switch_scalar);
         secp256k1_scalar_clear(&tmp_scalar);
         return 0;
     }
-    secp256k1_scalar_add(&blind_switch_scalar, &blind_switch_scalar, &tmp_scalar);
+    secp256k1_scalar_add(&blind_switch_scalar, &blind_switch_scalar, &tmp_scalar); /* x + hash(xG+vH||xJ) */
     secp256k1_scalar_get_b32(blind_switch, &blind_switch_scalar);
+    secp256k1_scalar_clear(&blind_switch_scalar);
     secp256k1_scalar_clear(&tmp_scalar);
     return 1;
 }

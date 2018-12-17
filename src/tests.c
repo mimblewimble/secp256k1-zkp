@@ -5215,6 +5215,10 @@ int main(int argc, char **argv) {
     run_bulletproofs_tests();
 #endif
 
+#ifdef ENABLE_MODULE_COMMITMENT
+    run_commitment_tests();
+#endif
+
 #ifdef ENABLE_MODULE_AGGSIG
     run_aggsig_tests();
 #endif
