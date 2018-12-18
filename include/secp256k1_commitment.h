@@ -181,6 +181,29 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_pedersen_blind_generato
   size_t n_inputs
 );
 
+/** Calculates the blinding factor x' = x + SHA256(xG+vH | xJ), used in the switch commitment x'G+vH
+ *
+ * Returns 1: Blinding factor successfully computed.
+ *         0: Error. Retry with different values.
+ *
+ * Args:           ctx: pointer to a context object
+ * Out:   blind_switch: blinding factor for the switch commitment
+ * In:           blind: pointer to a 32-byte blinding factor
+ *               value: unsigned 64-bit integer value to commit to
+ *           value_gen: value generator 'h'
+ *           blind_gen: blinding factor generator 'g'
+ *       switch_pubkey: pointer to public key 'j'
+ */
+SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_blind_switch(
+  const secp256k1_context* ctx, 
+  unsigned char* blind_switch, 
+  const unsigned char* blind, 
+  uint64_t value, 
+  const secp256k1_generator* value_gen, 
+  const secp256k1_generator* blind_gen, 
+  const secp256k1_pubkey* switch_pubkey
+);
+
 /** Converts a pedersent commit to a pubkey
  *
  * Returns 1: Public key succesfully computed.

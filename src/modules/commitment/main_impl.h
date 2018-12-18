@@ -263,4 +263,60 @@ int secp256k1_pedersen_blind_generator_blind_sum(const secp256k1_context* ctx, c
     return 1;
 }
 
+/* Generates a blinding key that contains a hashed switch commitment. */
+int secp256k1_blind_switch(const secp256k1_context* ctx, unsigned char* blind_switch, const unsigned char* blind, uint64_t value, const secp256k1_generator* value_gen, const secp256k1_generator* blind_gen, const secp256k1_pubkey* switch_pubkey) {
+    secp256k1_sha256 hasher;
+    secp256k1_pedersen_commitment commit;
+    unsigned char buf[33];
+    size_t buflen = sizeof(buf);
+    unsigned char hashed[32];
+    int overflow;
+    secp256k1_scalar blind_switch_scalar;
+    secp256k1_pubkey tmp_pubkey;
+    secp256k1_scalar tmp_scalar;
+    VERIFY_CHECK(ctx != NULL);
+    ARG_CHECK(blind_switch != NULL);
+    ARG_CHECK(blind != NULL);
+    ARG_CHECK(value_gen != NULL);
+    ARG_CHECK(blind_gen != NULL);
+    ARG_CHECK(switch_pubkey != NULL);
+
+    secp256k1_sha256_initialize(&hasher);
+    /* xG + vH */
+    if (secp256k1_pedersen_commit(ctx, &commit, blind, value, value_gen, blind_gen) != 1) {
+        return 0;
+    }
+    if (secp256k1_pedersen_commitment_serialize(ctx, buf, &commit) != 1) {
+        return 0;
+    }
+    secp256k1_sha256_write(&hasher, buf, buflen);
+
+    /* xJ */
+    tmp_pubkey = *switch_pubkey;
+    if (secp256k1_ec_pubkey_tweak_mul(ctx, &tmp_pubkey, blind) != 1) {
+        return 0;
+    }
+    if (secp256k1_ec_pubkey_serialize(ctx, buf, &buflen, &tmp_pubkey, SECP256K1_EC_COMPRESSED) != 1) {
+        return 0;
+    }
+    secp256k1_sha256_write(&hasher, buf, buflen);
+    secp256k1_sha256_finalize(&hasher, hashed);
+    secp256k1_scalar_set_b32(&blind_switch_scalar, hashed, &overflow); /* hash(xG+vH||xJ) */
+    if (overflow) {
+        secp256k1_scalar_clear(&blind_switch_scalar);
+        return 0;
+    }
+    secp256k1_scalar_set_b32(&tmp_scalar, blind, &overflow);
+    if (overflow) {
+        secp256k1_scalar_clear(&blind_switch_scalar);
+        secp256k1_scalar_clear(&tmp_scalar);
+        return 0;
+    }
+    secp256k1_scalar_add(&blind_switch_scalar, &blind_switch_scalar, &tmp_scalar); /* x + hash(xG+vH||xJ) */
+    secp256k1_scalar_get_b32(blind_switch, &blind_switch_scalar);
+    secp256k1_scalar_clear(&blind_switch_scalar);
+    secp256k1_scalar_clear(&tmp_scalar);
+    return 1;
+}
+
 #endif
