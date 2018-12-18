@@ -292,7 +292,7 @@ int secp256k1_blind_switch(const secp256k1_context* ctx, unsigned char* blind_sw
     secp256k1_sha256_write(&hasher, buf, buflen);
 
     /* xJ */
-    memcpy(&tmp_pubkey, switch_pubkey, sizeof(*switch_pubkey));
+    tmp_pubkey = *switch_pubkey;
     if (secp256k1_ec_pubkey_tweak_mul(ctx, &tmp_pubkey, blind) != 1) {
         return 0;
     }
