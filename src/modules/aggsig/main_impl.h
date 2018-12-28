@@ -220,6 +220,7 @@ int secp256k1_aggsig_sign_single(const secp256k1_context* ctx,
     ARG_CHECK(sig64 != NULL);
     ARG_CHECK(msg32 != NULL);
     ARG_CHECK(seckey32 != NULL);
+    ARG_CHECK(seed != NULL);
 
     /* generate nonce if needed */
     if (secnonce32==NULL){
@@ -401,6 +402,7 @@ int secp256k1_aggsig_add_signatures_single(const secp256k1_context* ctx,
     VERIFY_CHECK(ctx != NULL);
     ARG_CHECK(sig64 != NULL);
     ARG_CHECK(sigs != NULL);
+    for (i=0;i<num_sigs;i++) ARG_CHECK(sigs[i] != NULL);
     ARG_CHECK(pubnonce_total != NULL);
     (void) ctx;
 
@@ -568,8 +570,13 @@ int secp256k1_aggsig_verify_single(
     cbdata.single_hash = sighash;
 
     scratch = secp256k1_scratch_space_create(ctx, 1024*4096);
+    if (scratch == NULL){
+        return 0;
+    }
+    
     /* Compute sG - eP, which should be R */
     if (!secp256k1_ecmult_multi_var(&ctx->ecmult_ctx, scratch, &pk_sum, &g_sc, secp256k1_aggsig_verify_callback_single, &cbdata, 1)) {
+        secp256k1_scratch_space_destroy(scratch);
         return 0;
     }
 
@@ -603,7 +610,6 @@ void secp256k1_aggsig_context_destroy(secp256k1_aggsig_context *aggctx) {
     free(aggctx->pubkeys);
     free(aggctx->secnonce);
     free(aggctx->progress);
-    secp256k1_rfc6979_hmac_sha256_finalize(&aggctx->rng);
     free(aggctx);
 }
 

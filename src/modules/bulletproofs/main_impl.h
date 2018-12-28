@@ -237,6 +237,7 @@ int secp256k1_bulletproof_rangeproof_prove(
         int overflow;
         secp256k1_scalar_set_b32(&blinds[i], blind[i], &overflow);
         if (overflow || secp256k1_scalar_is_zero(&blinds[i])) {
+            secp256k1_scratch_deallocate_frame(scratch);
             return 0;
         }
         
@@ -261,11 +262,17 @@ int secp256k1_bulletproof_rangeproof_prove(
 
     if (t_one != NULL) {
         tge = malloc(2*sizeof(secp256k1_ge));
+        if (tge == NULL){
+            secp256k1_scratch_deallocate_frame(scratch);
+            return 0;
+        }
         if (tau_x != NULL) {
             if (!secp256k1_pubkey_load(ctx, &tge[0], t_one)) {
+                secp256k1_scratch_deallocate_frame(scratch);
                 return 0;
             }
             if (!secp256k1_pubkey_load(ctx, &tge[1], t_two)) {
+                secp256k1_scratch_deallocate_frame(scratch);
                 return 0;
             }
         }
