@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>Secp256k1.ZKP</id>
+    <version>0</version>
+    <authors>pingpongsneak</authors>
+    <owners>pingpongsneak</owners>
+    <requireLicenseAcceptance>true</requireLicenseAcceptance>
+    <projectUrl>https://github.com/tangramproject/secp256k1-zkp</projectUrl>
+    <description>This package contains platform-specific native code builds of secp256k1. Included: osx-x64/libsecp256k1.dylib, linux-x64/libsecp256k1.so, win-x64/secp256k1.dll, win-x86/secp256k1.dll</description>
+    <tags>Optimized C library for EC operations on curve secp256k1.</tags>
+  </metadata>
+  <files>
+    <file src="lib/linux-x64/libsecp256k1.so" target="runtimes/linux-x64/native/libsecp256k1.so" />
+    <file src="lib/osx-x64/libsecp256k1.dylib" target="runtimes/osx-x64/native/libsecp256k1.dylib" />
+    <file src="lib/win-x64/secp256k1.dll" target="runtimes/win-x64/native/secp256k1.dll" />
+    <file src="lib/win-x86/secp256k1.dll" target="runtimes/win-x86/native/secp256k1.dll" />
+    <file src="Secp256k1.ZKP.targets" target="build/netstandard1.0"/>
+  </files>
+</package>
