@@ -2,13 +2,19 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
   <metadata>
     <id>Secp256k1.ZKP</id>
-    <version>0</version>
+    <version>1</version>
+    <title>Secp256k1.ZKP</title>
     <authors>pingpongsneak</authors>
     <owners>pingpongsneak</owners>
     <requireLicenseAcceptance>true</requireLicenseAcceptance>
+    <licenseUrl>https://github.com/mimblewimble/secp256k1-zkp/blob/master/COPYING</licenseUrl>
     <projectUrl>https://github.com/tangramproject/secp256k1-zkp</projectUrl>
-    <description>This package contains platform-specific native code builds of secp256k1. Included: osx-x64/libsecp256k1.dylib, linux-x64/libsecp256k1.so, win-x64/secp256k1.dll, win-x86/secp256k1.dll</description>
-    <tags>Optimized C library for EC operations on curve secp256k1.</tags>
+    <description>This package contains platform-specific native code builds of secp256k1. Included: osx-x64/libsecp256k1.dylib</description>
+    <tags>Secp256k1 libsecp256k1 Tangram ECDSA bitcoin Grin MimbleWimble</tags>
+    <iconUrl>https://avatars1.githubusercontent.com/u/37107370</iconUrl>
+    <dependencies>
+      <group targetFramework=".NETStandard2.0" />
+    </dependencies>
   </metadata>
   <files>
     <file src="lib/linux-x64/libsecp256k1.so" target="runtimes/linux-x64/native/libsecp256k1.so" />
