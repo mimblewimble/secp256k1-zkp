@@ -33,6 +33,7 @@ libtool
 *.lo
 *.o
 *~
+*.nupkg
 src/libsecp256k1-config.h
 src/libsecp256k1-config.h.in
 src/ecmult_static_context.h
@@ -54,3 +55,4 @@ libsecp256k1.pc
 build/
 build_32/
 build_64/
+lib
