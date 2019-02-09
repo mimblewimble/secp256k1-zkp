@@ -4046,6 +4046,15 @@ void run_eckey_edge_case_test(void) {
     CHECK(secp256k1_ec_privkey_tweak_mul(ctx, ctmp2, ctmp) == 1);
     CHECK(secp256k1_ec_privkey_tweak_neg(ctx, ctmp) == 1);
     CHECK(memcmp(ctmp, ctmp2, 32) == 0);
+    /* -1/x == 1/(-x) */
+    random_scalar_order_test(&tmp_s);
+    secp256k1_scalar_get_b32(ctmp, &tmp_s);
+    memcpy(ctmp2, ctmp, 32);
+    CHECK(secp256k1_ec_privkey_tweak_neg(ctx, ctmp) == 1);
+    CHECK(secp256k1_ec_privkey_tweak_inv(ctx, ctmp) == 1);
+    CHECK(secp256k1_ec_privkey_tweak_inv(ctx, ctmp2) == 1);
+    CHECK(secp256k1_ec_privkey_tweak_neg(ctx, ctmp2) == 1);
+    CHECK(memcmp(ctmp, ctmp2, 32) == 0);
 }
 
 void random_sign(secp256k1_scalar *sigr, secp256k1_scalar *sigs, const secp256k1_scalar *key, const secp256k1_scalar *msg, int *recid) {
