@@ -3988,6 +3988,23 @@ void run_eckey_edge_case_test(void) {
     CHECK(memcmp(&pubkey, zeros, sizeof(secp256k1_pubkey)) > 0);
     CHECK(ecount == 3);
     secp256k1_context_set_illegal_callback(ctx, NULL, NULL);
+    /* Inverse of secret key 1 is 1 */
+    memset(ctmp, 0, 32);
+    ctmp[31] = 0x01;
+    memset(ctmp2, 0, 32);
+    ctmp2[31] = 0x01;
+    CHECK(secp256k1_ec_privkey_tweak_inverse(ctx, ctmp2) == 1);
+    CHECK(memcmp(ctmp, ctmp2, 32) == 0);
+    /* Secret key times inverse is 1 */
+    memset(ctmp, 0, 32);
+    ctmp[31] = 0xac;
+    memset(ctmp2, 0, 32);
+    ctmp2[31] = 0xac;
+    CHECK(secp256k1_ec_privkey_tweak_inverse(ctx, ctmp2) == 1);
+    CHECK(secp256k1_ec_privkey_tweak_mul(ctx, ctmp, ctmp2) == 1);
+    memset(ctmp2, 0, 32);
+    ctmp2[31] = 0x01;
+    CHECK(memcmp(ctmp, ctmp2, 32) == 0);
 }
 
 void random_sign(secp256k1_scalar *sigr, secp256k1_scalar *sigs, const secp256k1_scalar *key, const secp256k1_scalar *msg, int *recid) {
