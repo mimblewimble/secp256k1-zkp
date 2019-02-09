@@ -3988,22 +3988,63 @@ void run_eckey_edge_case_test(void) {
     CHECK(memcmp(&pubkey, zeros, sizeof(secp256k1_pubkey)) > 0);
     CHECK(ecount == 3);
     secp256k1_context_set_illegal_callback(ctx, NULL, NULL);
-    /* Inverse of secret key 1 is 1 */
+    /* Secret key inversion and negation tests */
+    /* Inverse of 1 is 1 */
     memset(ctmp, 0, 32);
     ctmp[31] = 0x01;
     memset(ctmp2, 0, 32);
     ctmp2[31] = 0x01;
-    CHECK(secp256k1_ec_privkey_tweak_inverse(ctx, ctmp2) == 1);
+    CHECK(secp256k1_ec_privkey_tweak_inv(ctx, ctmp2) == 1);
     CHECK(memcmp(ctmp, ctmp2, 32) == 0);
-    /* Secret key times inverse is 1 */
-    memset(ctmp, 0, 32);
-    ctmp[31] = 0xac;
-    memset(ctmp2, 0, 32);
-    ctmp2[31] = 0xac;
-    CHECK(secp256k1_ec_privkey_tweak_inverse(ctx, ctmp2) == 1);
+    /* Inverse of inverse */
+    secp256k1_scalar tmp_s;
+    random_scalar_order_test(&tmp_s);
+    secp256k1_scalar_get_b32(ctmp, &tmp_s);
+    memcpy(ctmp2, ctmp, 32);
+    CHECK(secp256k1_ec_privkey_tweak_inv(ctx, ctmp2) == 1);
+    CHECK(memcmp(ctmp, ctmp2, 32) != 0);
+    CHECK(secp256k1_ec_privkey_tweak_inv(ctx, ctmp2) == 1);
+    CHECK(memcmp(ctmp, ctmp2, 32) == 0);
+    /* Self times inverse is 1 */
+    random_scalar_order_test(&tmp_s);
+    secp256k1_scalar_get_b32(ctmp, &tmp_s);
+    memcpy(ctmp2, ctmp, 32);
+    CHECK(secp256k1_ec_privkey_tweak_inv(ctx, ctmp2) == 1);
     CHECK(secp256k1_ec_privkey_tweak_mul(ctx, ctmp, ctmp2) == 1);
     memset(ctmp2, 0, 32);
     ctmp2[31] = 0x01;
+    CHECK(memcmp(ctmp, ctmp2, 32) == 0);
+    /* Negated added to self is 0 */
+    random_scalar_order_test(&tmp_s);
+    secp256k1_scalar_get_b32(ctmp, &tmp_s);
+    memcpy(ctmp2, ctmp, 32);
+    CHECK(secp256k1_ec_privkey_tweak_neg(ctx, ctmp2) == 1);
+    CHECK(secp256k1_ec_privkey_tweak_add(ctx, ctmp, ctmp2) == 0);
+    /* Negation of negation */
+    random_scalar_order_test(&tmp_s);
+    secp256k1_scalar_get_b32(ctmp, &tmp_s);
+    memcpy(ctmp2, ctmp, 32);
+    CHECK(secp256k1_ec_privkey_tweak_neg(ctx, ctmp2) == 1);
+    CHECK(memcmp(ctmp, ctmp2, 32) != 0);
+    CHECK(secp256k1_ec_privkey_tweak_neg(ctx, ctmp2) == 1);
+    CHECK(memcmp(ctmp, ctmp2, 32) == 0);
+    /* 2*(-1)*x == (-1)*2*x */
+    random_scalar_order_test(&tmp_s);
+    secp256k1_scalar_get_b32(ctmp, &tmp_s);
+    memcpy(ctmp2, ctmp, 32);
+    CHECK(secp256k1_ec_privkey_tweak_neg(ctx, ctmp) == 1);
+    CHECK(secp256k1_ec_privkey_tweak_add(ctx, ctmp, ctmp) == 1);
+    CHECK(secp256k1_ec_privkey_tweak_add(ctx, ctmp2, ctmp2) == 1);
+    CHECK(secp256k1_ec_privkey_tweak_neg(ctx, ctmp2) == 1);
+    CHECK(memcmp(ctmp, ctmp2, 32) == 0);
+    /* -x == (-1)*x */
+    random_scalar_order_test(&tmp_s);
+    secp256k1_scalar_get_b32(ctmp, &tmp_s);
+    memset(ctmp2, 0, 32);
+    ctmp2[31] = 0x01;
+    CHECK(secp256k1_ec_privkey_tweak_neg(ctx, ctmp2) == 1);
+    CHECK(secp256k1_ec_privkey_tweak_mul(ctx, ctmp2, ctmp) == 1);
+    CHECK(secp256k1_ec_privkey_tweak_neg(ctx, ctmp) == 1);
     CHECK(memcmp(ctmp, ctmp2, 32) == 0);
 }
 
