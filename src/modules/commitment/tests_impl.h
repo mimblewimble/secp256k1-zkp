@@ -229,8 +229,6 @@ void test_switch(void) {
     unsigned char blind_switch_2[32];
     uint64_t val = secp256k1_rand32();
 
-    local_ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
-
     secp256k1_generator GENERATOR_G = {{
         0x79, 0xbe, 0x66, 0x7e, 0xf9, 0xdc, 0xbb, 0xac,
         0x55, 0xa0, 0x62, 0x95, 0xce, 0x87, 0x0b, 0x07,
@@ -271,6 +269,8 @@ void test_switch(void) {
         0x29, 0x54, 0xf4, 0x9b, 0x7e, 0x39, 0x8b, 0x8d,
         0x2a, 0x01, 0x93, 0x93, 0x36, 0x21, 0x15, 0x5f
     };
+
+    local_ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
 
     CHECK(secp256k1_ec_pubkey_parse(local_ctx, &tmp_pubkey, GENERATOR_J_COMPR, 33));
     CHECK(memcmp(GENERATOR_J_PUB.data, tmp_pubkey.data, 64) == 0);
