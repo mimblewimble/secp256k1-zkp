@@ -41,14 +41,13 @@ static void test_commitment_api(void) {
     secp256k1_context_set_illegal_callback(both, counting_illegal_callback_fn, &ecount);
 
     secp256k1_rand256(blind);
-    /* TODO: fix these tests */
-    /* CHECK(secp256k1_pedersen_commit(none, &commit, blind, val, &secp256k1_generator_const_h, &secp256k1_generator_const_g) == 0);
+    CHECK(secp256k1_pedersen_commit(none, &commit, blind, val, &secp256k1_generator_const_h, &secp256k1_generator_const_g) == 1);
     CHECK(ecount == 1);
-    CHECK(secp256k1_pedersen_commit(vrfy, &commit, blind, val, &secp256k1_generator_const_h, &secp256k1_generator_const_g) == 0);
-    CHECK(ecount == 2);*/
+    CHECK(secp256k1_pedersen_commit(vrfy, &commit, blind, val, &secp256k1_generator_const_h, &secp256k1_generator_const_g) == 1);
+    CHECK(ecount == 1);
+    CHECK(secp256k1_pedersen_commit(sign, &commit, blind, val, &secp256k1_generator_const_h, &secp256k1_generator_const_g) == 1);
+    CHECK(ecount == 1);
     ecount = 2;
-    CHECK(secp256k1_pedersen_commit(sign, &commit, blind, val, &secp256k1_generator_const_h, &secp256k1_generator_const_g) != 0);
-    CHECK(ecount == 2);
 
     CHECK(secp256k1_pedersen_commit(sign, NULL, blind, val, &secp256k1_generator_const_h, &secp256k1_generator_const_g) == 0);
     CHECK(ecount == 3);
