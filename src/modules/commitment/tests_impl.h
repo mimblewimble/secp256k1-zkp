@@ -216,11 +216,10 @@ void test_multiple_generators(void) {
     /* Correct for blinding factors and do the commitments */
     CHECK(secp256k1_pedersen_blind_generator_blind_sum(ctx, value, (const unsigned char * const *) generator_blind, pedersen_blind, n_generators, n_inputs));
     for (i = 0; i < n_generators; i++) {
-        CHECK(secp256k1_pedersen_commit(ctx, &commit[i], pedersen_blind[i], value[i], &generator[i], &secp256k1_generator_const_h));
+        CHECK(secp256k1_pedersen_commit(ctx, &commit[i], pedersen_blind[i], value[i], &generator[i], &secp256k1_generator_const_g));
     }
 
     /* Verify */
-    /* TODO: fix this test */
     CHECK(secp256k1_pedersen_verify_tally(ctx, &commit_ptr[0], n_inputs, &commit_ptr[n_inputs], n_outputs));
 
     /* Cleanup */
