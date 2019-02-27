@@ -222,14 +222,14 @@ void test_multiple_generators(void) {
 #undef MAX_N_GENS
 
 void test_switch(void) {
-    secp256k1_context *ctx;
+    secp256k1_context *local_ctx;
     secp256k1_pubkey tmp_pubkey;
     unsigned char blind[32];
     unsigned char blind_switch[32];
     unsigned char blind_switch_2[32];
     uint64_t val = secp256k1_rand32();
 
-    ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
+    local_ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
 
     secp256k1_generator GENERATOR_G = {{
         0x79, 0xbe, 0x66, 0x7e, 0xf9, 0xdc, 0xbb, 0xac,
@@ -272,12 +272,12 @@ void test_switch(void) {
         0x2a, 0x01, 0x93, 0x93, 0x36, 0x21, 0x15, 0x5f
     };
 
-    CHECK(secp256k1_ec_pubkey_parse(ctx, &tmp_pubkey, GENERATOR_J_COMPR, 33));
+    CHECK(secp256k1_ec_pubkey_parse(local_ctx, &tmp_pubkey, GENERATOR_J_COMPR, 33));
     CHECK(memcmp(GENERATOR_J_PUB.data, tmp_pubkey.data, 64) == 0);
     secp256k1_rand256(blind);
-    CHECK(secp256k1_blind_switch(ctx, blind_switch, blind, val, &GENERATOR_H, &GENERATOR_G, &GENERATOR_J_PUB));
+    CHECK(secp256k1_blind_switch(local_ctx, blind_switch, blind, val, &GENERATOR_H, &GENERATOR_G, &GENERATOR_J_PUB));
     CHECK(memcmp(blind_switch, blind, 32) != 0);
-    CHECK(secp256k1_blind_switch(ctx, blind_switch_2, blind, val, &GENERATOR_H, &GENERATOR_G, &GENERATOR_J_PUB));
+    CHECK(secp256k1_blind_switch(local_ctx, blind_switch_2, blind, val, &GENERATOR_H, &GENERATOR_G, &GENERATOR_J_PUB));
     CHECK(memcmp(blind_switch_2, blind_switch, 32) == 0);
 }
 
