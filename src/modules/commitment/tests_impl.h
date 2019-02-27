@@ -297,7 +297,7 @@ void run_commitment_tests(void) {
     for (i = 0; i < 10*count; i++) {
         test_pedersen();
     }
-    /*test_multiple_generators();*/
+    test_multiple_generators();
     test_switch();
 }
 
