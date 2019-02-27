@@ -18,6 +18,7 @@
 
 static void test_commitment_api(void) {
     secp256k1_pedersen_commitment commit;
+    secp256k1_pedersen_commitment commit2;
     const secp256k1_pedersen_commitment *commit_ptr = &commit;
     unsigned char blind[32];
     unsigned char blind_out[32];
@@ -93,6 +94,45 @@ static void test_commitment_api(void) {
     CHECK(ecount == 15);
     CHECK(secp256k1_pedersen_blind_generator_blind_sum(none, &val, &blind_ptr, NULL, 1, 0) == 0);
     CHECK(ecount == 16);
+
+    /* Test commit with integer and blinding factor */
+    /* Value: 1*/
+    secp256k1_scalar tmp_s;
+    unsigned char out[33];
+    unsigned char out2[33];
+    random_scalar_order_test(&tmp_s);
+    secp256k1_scalar_get_b32(blind, &tmp_s);
+    memset(blind_out, 0, 32);
+    blind_out[31] = 1;
+    val = 1;
+    CHECK(secp256k1_pedersen_commit(sign, &commit, blind, val, &secp256k1_generator_const_h, &secp256k1_generator_const_g) == 1);
+    CHECK(secp256k1_pedersen_commitment_serialize(sign, out, &commit) == 1);
+    CHECK(secp256k1_pedersen_blind_commit(sign, &commit2, blind, blind_out, &secp256k1_generator_const_h, &secp256k1_generator_const_g) == 1);
+    CHECK(secp256k1_pedersen_commitment_serialize(sign, out2, &commit2) == 1);
+    CHECK(memcmp(out, out2, 33) == 0);
+    /* Value: 1 and 2*/
+    random_scalar_order_test(&tmp_s);
+    secp256k1_scalar_get_b32(blind, &tmp_s);
+    memset(blind_out, 0, 32);
+    blind_out[31] = 1;
+    val = 2;
+    CHECK(secp256k1_pedersen_commit(sign, &commit, blind, val, &secp256k1_generator_const_h, &secp256k1_generator_const_g) == 1);
+    CHECK(secp256k1_pedersen_commitment_serialize(sign, out, &commit) == 1);
+    CHECK(secp256k1_pedersen_blind_commit(sign, &commit2, blind, blind_out, &secp256k1_generator_const_h, &secp256k1_generator_const_g) == 1);
+    CHECK(secp256k1_pedersen_commitment_serialize(sign, out2, &commit2) == 1);
+    CHECK(memcmp(out, out2, 33) != 0);
+    /* Value: random*/
+    random_scalar_order_test(&tmp_s);
+    secp256k1_scalar_get_b32(blind, &tmp_s);
+    memset(blind_out, 0, 32);
+    blind_out[30] = secp256k1_rand32()%256;
+    blind_out[31] = secp256k1_rand32()%256;
+    val = blind_out[30]*256 + blind_out[31];
+    CHECK(secp256k1_pedersen_commit(sign, &commit, blind, val, &secp256k1_generator_const_h, &secp256k1_generator_const_g) == 1);
+    CHECK(secp256k1_pedersen_commitment_serialize(sign, out, &commit) == 1);
+    CHECK(secp256k1_pedersen_blind_commit(sign, &commit2, blind, blind_out, &secp256k1_generator_const_h, &secp256k1_generator_const_g) == 1);
+    CHECK(secp256k1_pedersen_commitment_serialize(sign, out2, &commit2) == 1);
+    CHECK(memcmp(out, out2, 33) == 0);
 
     secp256k1_context_destroy(none);
     secp256k1_context_destroy(sign);

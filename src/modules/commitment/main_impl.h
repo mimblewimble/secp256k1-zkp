@@ -108,6 +108,41 @@ int secp256k1_pedersen_commit(const secp256k1_context* ctx, secp256k1_pedersen_c
     return ret;
 }
 
+/* Generates a pedersen commitment: *commit = blind * G + value * G2. The blinding factor is 32 bytes.*/
+int secp256k1_pedersen_blind_commit(const secp256k1_context* ctx, secp256k1_pedersen_commitment *commit, const unsigned char *blind, const unsigned char *value, const secp256k1_generator* value_gen, const secp256k1_generator* blind_gen) {
+    secp256k1_ge value_genp;
+    secp256k1_ge blind_genp;
+    secp256k1_gej rj;
+    secp256k1_ge r;
+    secp256k1_scalar sec;
+    secp256k1_scalar sec2;
+    int overflow;
+    int overflow2;
+    int ret = 0;
+    VERIFY_CHECK(ctx != NULL);
+    ARG_CHECK(commit != NULL);
+    ARG_CHECK(blind != NULL);
+    ARG_CHECK(value != NULL);
+    ARG_CHECK(value_gen != NULL);
+    ARG_CHECK(blind_gen != NULL);
+    secp256k1_generator_load(&value_genp, value_gen);
+    secp256k1_generator_load(&blind_genp, blind_gen);
+    secp256k1_scalar_set_b32(&sec, blind, &overflow);
+    secp256k1_scalar_set_b32(&sec2, value, &overflow2);
+    if (!overflow && !overflow2) {
+        secp256k1_pedersen_blind_ecmult(&rj, &sec, &sec2, &value_genp, &blind_genp);
+        if (!secp256k1_gej_is_infinity(&rj)) {
+            secp256k1_ge_set_gej(&r, &rj);
+            secp256k1_pedersen_commitment_save(commit, &r);
+            ret = 1;
+        }
+        secp256k1_gej_clear(&rj);
+        secp256k1_ge_clear(&r);
+    }
+    secp256k1_scalar_clear(&sec);
+    return ret;
+}
+
 int secp256k1_pedersen_commitment_to_pubkey(const secp256k1_context* ctx, secp256k1_pubkey* pubkey, const secp256k1_pedersen_commitment* commit) {
     secp256k1_ge Q;
     secp256k1_fe fe;
