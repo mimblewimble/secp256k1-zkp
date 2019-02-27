@@ -29,7 +29,7 @@ static void test_commitment_api(void) {
     secp256k1_context *sign = secp256k1_context_create(SECP256K1_CONTEXT_SIGN);
     secp256k1_context *vrfy = secp256k1_context_create(SECP256K1_CONTEXT_VERIFY);
     secp256k1_context *both = secp256k1_context_create(SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
-    int32_t ecount;
+    int32_t ecount = 0;
 
     secp256k1_context_set_error_callback(none, counting_illegal_callback_fn, &ecount);
     secp256k1_context_set_error_callback(sign, counting_illegal_callback_fn, &ecount);
@@ -42,11 +42,11 @@ static void test_commitment_api(void) {
 
     secp256k1_rand256(blind);
     CHECK(secp256k1_pedersen_commit(none, &commit, blind, val, &secp256k1_generator_const_h, &secp256k1_generator_const_g) == 1);
-    CHECK(ecount == 1);
+    CHECK(ecount == 0);
     CHECK(secp256k1_pedersen_commit(vrfy, &commit, blind, val, &secp256k1_generator_const_h, &secp256k1_generator_const_g) == 1);
-    CHECK(ecount == 1);
+    CHECK(ecount == 0);
     CHECK(secp256k1_pedersen_commit(sign, &commit, blind, val, &secp256k1_generator_const_h, &secp256k1_generator_const_g) == 1);
-    CHECK(ecount == 1);
+    CHECK(ecount == 0);
     ecount = 2;
 
     CHECK(secp256k1_pedersen_commit(sign, NULL, blind, val, &secp256k1_generator_const_h, &secp256k1_generator_const_g) == 0);
