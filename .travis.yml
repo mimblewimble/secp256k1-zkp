@@ -28,7 +28,7 @@ env:
     - BIGNUM=no
     - BIGNUM=no       ENDOMORPHISM=yes RECOVERY=yes EXPERIMENTAL=yes
     - BIGNUM=no       STATICPRECOMPUTATION=no
-    - BUILD=distcheck
+#   - BUILD=distcheck
     - EXTRAFLAGS=CPPFLAGS=-DDETERMINISTIC
     - EXTRAFLAGS=CFLAGS=-O0
     - BUILD=check-java JNI=yes ECDH=yes EXPERIMENTAL=yes
