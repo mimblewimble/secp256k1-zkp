@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
   <metadata>
     <id>Secp256k1.ZKP</id>
-    <version>1.0.4</version>
+    <version>1.0.5</version>
     <title>Secp256k1.ZKP</title>
     <authors>pingpongsneak</authors>
     <owners>pingpongsneak</owners>
@@ -18,10 +18,10 @@
   </metadata>
   <files>
     <file src="lib/osx-x64/libsecp256k1.dylib" target="runtimes/osx-x64/native/libsecp256k1.dylib" />
+    <file src="lib/win-x64/libsecp256k1.dll" target="runtimes/win-x64/native/libsecp256k1.dll" />
+    <file src="lib/win-x86/libsecp256k1.dll" target="runtimes/win-x86/native/libsecp256k1.dll" />
     <!--
     <file src="lib/linux-x64/libsecp256k1.so" target="runtimes/linux-x64/native/libsecp256k1.so" />
-    <file src="lib/win-x64/secp256k1.dll" target="runtimes/win-x64/native/secp256k1.dll" />
-    <file src="lib/win-x86/secp256k1.dll" target="runtimes/win-x86/native/secp256k1.dll" />
     -->
     <file src="Secp256k1.ZKP.targets" target="build/netstandard1.0"/>
   </files>
