@@ -1,21 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
+    <Content Include="$(MSBuildThisFileDirectory)..\..\runtimes\win-x64\native\libsecp256k1.dll">
+      <PackageCopyToOutput>true</PackageCopyToOutput>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>native\win-x64\libsecp256k1.dll</Link>
+      <Visible>true</Visible>
+      <Pack>false</Pack>
+    </Content>
+    <Content Include="$(MSBuildThisFileDirectory)..\..\runtimes\win-x86\native\libsecp256k1.dll">
+      <PackageCopyToOutput>true</PackageCopyToOutput>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>native\win-x86\libsecp256k1.dll</Link>
+      <Visible>true</Visible>
+      <Pack>false</Pack>
+    </Content>
     <!--
-    <Content Include="$(MSBuildThisFileDirectory)..\..\runtimes\win-x64\native\secp256k1.dll">
-      <PackageCopyToOutput>true</PackageCopyToOutput>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <Link>native\win-x64\secp256k1.dll</Link>
-      <Visible>true</Visible>
-      <Pack>false</Pack>
-    </Content>
-    <Content Include="$(MSBuildThisFileDirectory)..\..\runtimes\win-x86\native\secp256k1.dll">
-      <PackageCopyToOutput>true</PackageCopyToOutput>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <Link>native\win-x86\secp256k1.dll</Link>
-      <Visible>true</Visible>
-      <Pack>false</Pack>
-    </Content>
     <Content Include="$(MSBuildThisFileDirectory)..\..\runtimes\linux-x64\native\libsecp256k1.so">
       <PackageCopyToOutput>true</PackageCopyToOutput>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
