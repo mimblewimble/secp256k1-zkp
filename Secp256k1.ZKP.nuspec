@@ -9,7 +9,7 @@
     <requireLicenseAcceptance>true</requireLicenseAcceptance>
     <licenseUrl>https://github.com/tangramproject/secp256k1-zkp/blob/master/COPYING</licenseUrl>
     <projectUrl>https://github.com/tangramproject/secp256k1-zkp</projectUrl>
-    <description>This package contains platform-specific native code builds of secp256k1. Included: osx-x64/libsecp256k1.dylib</description>
+    <description>This package contains platform-specific native code builds of secp256k1. Included:win-x86/libsecp256k1.dll, win-x64/libsecp256k1.dll, osx-x64/libsecp256k1.dylib</description>
     <tags>Secp256k1 libsecp256k1 Tangram ECDSA bitcoin Grin MimbleWimble</tags>
     <iconUrl>https://avatars1.githubusercontent.com/u/37107370</iconUrl>
     <dependencies>
