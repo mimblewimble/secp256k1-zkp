@@ -1,33 +1,37 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Content Include="$(MSBuildThisFileDirectory)..\..\runtimes\win-x64\native\libsecp256k1.dll">
+
+    <!-- x64 Windows -->
+    <Content Include="$(MSBuildThisFileDirectory)..\..\runtimes\win-x64\native\**\*" Condition=" '$(OS)' == 'Windows_NT' and '$(Platform)' == 'x64' ">
       <PackageCopyToOutput>true</PackageCopyToOutput>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <Link>native\win-x64\libsecp256k1.dll</Link>
       <Visible>true</Visible>
       <Pack>false</Pack>
     </Content>
-    <Content Include="$(MSBuildThisFileDirectory)..\..\runtimes\win-x86\native\libsecp256k1.dll">
+
+    <!-- x86 Windows -->
+    <Content Include="$(MSBuildThisFileDirectory)..\..\runtimes\win-x86\native\**\*" Condition=" '$(OS)' == 'Windows_NT' and '$(Platform)' == 'x86' ">
       <PackageCopyToOutput>true</PackageCopyToOutput>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <Link>native\win-x86\libsecp256k1.dll</Link>
       <Visible>true</Visible>
       <Pack>false</Pack>
     </Content>
-    <!--
-    <Content Include="$(MSBuildThisFileDirectory)..\..\runtimes\linux-x64\native\libsecp256k1.so">
+    
+    <!-- x64 Linux -->
+    <!-->
+    <Content Include="$(MSBuildThisFileDirectory)..\..\runtimes\linux-x64\native\**\*" Condition=" '$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Linux)))' ">
       <PackageCopyToOutput>true</PackageCopyToOutput>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <Link>native\linux-x64\libsecp256k1.so</Link>
       <Visible>true</Visible>
       <Pack>false</Pack>
     </Content>
     -->
-    <Content Include="$(MSBuildThisFileDirectory)..\..\runtimes\osx-x64\native\libsecp256k1.dylib">
+
+    <!-- x64 OSX -->
+    <Content Include="$(MSBuildThisFileDirectory)..\..\runtimes\osx-x64\native\**\*" Condition=" '$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::OSX)))' ">
       <PackageCopyToOutput>true</PackageCopyToOutput>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <Link>native\osx-x64\libsecp256k1.dylib</Link>
       <Visible>true</Visible>
       <Pack>false</Pack>
     </Content>
