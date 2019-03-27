@@ -19,14 +19,12 @@
     </Content>
     
     <!-- x64 Linux -->
-    <!-->
     <Content Include="$(MSBuildThisFileDirectory)..\..\runtimes\linux-x64\native\**\*" Condition=" '$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Linux)))' ">
       <PackageCopyToOutput>true</PackageCopyToOutput>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Visible>true</Visible>
       <Pack>false</Pack>
     </Content>
-    -->
 
     <!-- x64 OSX -->
     <Content Include="$(MSBuildThisFileDirectory)..\..\runtimes\osx-x64\native\**\*" Condition=" '$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::OSX)))' ">

@@ -9,7 +9,7 @@
     <requireLicenseAcceptance>true</requireLicenseAcceptance>
     <licenseUrl>https://github.com/tangramproject/secp256k1-zkp/blob/master/COPYING</licenseUrl>
     <projectUrl>https://github.com/tangramproject/secp256k1-zkp</projectUrl>
-    <description>This package contains platform-specific native code builds of secp256k1. Included:win-x86/libsecp256k1.dll, win-x64/libsecp256k1.dll, osx-x64/libsecp256k1.dylib</description>
+    <description>This package contains platform-specific native code builds of secp256k1. Included:win-x86/libsecp256k1.dll, win-x64/libsecp256k1.dll, osx-x64/libsecp256k1.dylib and linux-x64/libsecp256k1.so</description>
     <tags>Secp256k1 libsecp256k1 Tangram ECDSA bitcoin Grin MimbleWimble</tags>
     <iconUrl>https://avatars1.githubusercontent.com/u/37107370</iconUrl>
     <dependencies>
@@ -22,9 +22,7 @@
     <file src="native/osx-x64/libsecp256k1.dylib" target="runtimes/osx-x64/native/libsecp256k1.dylib" />
     <file src="native/win-x64/libsecp256k1.dll" target="runtimes/win-x64/native/libsecp256k1.dll" />
     <file src="native/win-x86/libsecp256k1.dll" target="runtimes/win-x86/native/libsecp256k1.dll" />
-    <!--
-    <file src="lib/linux-x64/libsecp256k1.so" target="runtimes/linux-x64/native/libsecp256k1.so" />
-    -->
+    <file src="native/linux-x64/libsecp256k1.so" target="runtimes/linux-x64/native/libsecp256k1.so" />
     <file src="Secp256k1.ZKP.targets" target="build/netstandard1.0/Secp256k1.ZKP.targets"/>
   </files>
 </package>
