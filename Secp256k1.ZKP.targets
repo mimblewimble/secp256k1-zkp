@@ -11,7 +11,7 @@
     </Content>
 
     <!-- x86 Windows -->
-    <Content Include="$(MSBuildThisFileDirectory)..\..\runtimes\win-x86\native\**\*" Condition=" '$(OS)' == 'Windows_NT' and '$(Platform)' == 'x86' ">
+    <Content Include="$(MSBuildThisFileDirectory)....\runtimes\win-x86\native*\" Condition=" '$(OS)' == 'Windows_NT' ">
       <PackageCopyToOutput>true</PackageCopyToOutput>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Visible>true</Visible>
