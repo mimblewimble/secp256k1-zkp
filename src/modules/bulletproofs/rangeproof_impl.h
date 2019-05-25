@@ -846,11 +846,7 @@ static int secp256k1_bulletproof_rangeproof_rewind_impl(uint64_t *value, secp256
     secp256k1_scalar_mul(blind, &taux, &z);
     secp256k1_scalar_negate(blind, blind);
 
-    secp256k1_pedersen_ecmult(&rewind_commitj, blind, *value, &value_genp, blind_gen);
-    secp256k1_gej_neg(&rewind_commitj, &rewind_commitj);
-    secp256k1_gej_add_ge_var(&rewind_commitj, &rewind_commitj, &commitp, NULL);
-
-    return secp256k1_gej_is_infinity(&rewind_commitj);
+    return 1;
 }
 
 #endif
