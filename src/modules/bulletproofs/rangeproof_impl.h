@@ -819,9 +819,9 @@ static int secp256k1_bulletproof_rangeproof_rewind_impl(uint64_t *value, secp256
     secp256k1_scalar_add(&mu, &mu, &alpha);
 
     secp256k1_scalar_get_b32(commit, &mu);
-    if (memcmp(commit, zero8, 8) != 0) {
+    /*if (memcmp(commit, zero8, 4) != 0) {
         return 0;
-    }
+    }*/
     *value = commit[31] + ((uint64_t) commit[30] << 8) +
              ((uint64_t) commit[29] << 16) + ((uint64_t) commit[28] << 24) +
              ((uint64_t) commit[27] << 32) + ((uint64_t) commit[26] << 40) +
