@@ -723,7 +723,7 @@ static int secp256k1_bulletproof_rangeproof_prove_impl(
 
 static int secp256k1_bulletproof_rangeproof_rewind_impl(uint64_t *value, secp256k1_scalar *blind, const unsigned char *proof, const size_t plen, uint64_t min_value, const secp256k1_pedersen_commitment *pcommit, const secp256k1_generator *value_gen, const secp256k1_ge *blind_gen, const unsigned char *nonce, const unsigned char *extra_commit, size_t extra_commit_len, unsigned char *message) {
     secp256k1_sha256 sha256;
-    static const unsigned char zero8[8] = { 0 };
+    static const unsigned char zero4[4] = { 0 };
     unsigned char commit[32] = { 0 };
     unsigned char lrparity;
     secp256k1_scalar taux, mu;
@@ -819,17 +819,17 @@ static int secp256k1_bulletproof_rangeproof_rewind_impl(uint64_t *value, secp256
     secp256k1_scalar_add(&mu, &mu, &alpha);
 
     secp256k1_scalar_get_b32(commit, &mu);
-    /*if (memcmp(commit, zero8, 4) != 0) {
+    if (memcmp(commit, zero4, 4) != 0) {
         return 0;
-    }*/
+    }
     *value = commit[31] + ((uint64_t) commit[30] << 8) +
              ((uint64_t) commit[29] << 16) + ((uint64_t) commit[28] << 24) +
              ((uint64_t) commit[27] << 32) + ((uint64_t) commit[26] << 40) +
              ((uint64_t) commit[25] << 48) + ((uint64_t) commit[24] << 56);
 
     if (message != NULL) {
-        for (i=23; i >= 8; i--) {
-            message[i-8] = commit[i];
+        for (i=23; i >= 4; i--) {
+            message[i-4] = commit[i];
         }
     }
 
