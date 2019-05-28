@@ -204,7 +204,7 @@ int secp256k1_bulletproof_rangeproof_prove(
     ARG_CHECK(gens != NULL);
     ARG_CHECK(gens->n >= 2 * nbits * n_commits);
     ARG_CHECK(
-        (proof != NULL && plen != NULL && tau_x == NULL && t_one == NULL && t_two == NULL && commits == NULL && private_nonce == NULL) ||
+        (proof != NULL && plen != NULL && tau_x == NULL && t_one == NULL && t_two == NULL && commits == NULL) ||
         (proof == NULL && plen == NULL && tau_x == NULL && t_one != NULL && t_two != NULL && commits != NULL && private_nonce != NULL) ||
         (proof == NULL && plen == NULL && tau_x != NULL && t_one != NULL && t_two != NULL && commits != NULL && private_nonce != NULL) ||
         (proof != NULL && plen != NULL && tau_x != NULL && t_one != NULL && t_two != NULL && commits != NULL && private_nonce != NULL)
