@@ -161,21 +161,20 @@ int secp256k1_bulletproof_rangeproof_verify_multi(const secp256k1_context* ctx, 
     return ret;
 }
 
-int secp256k1_bulletproof_rangeproof_rewind(const secp256k1_context* ctx, const secp256k1_bulletproof_generators *gens, uint64_t *value, unsigned char *blind, const unsigned char *proof, size_t plen, uint64_t min_value, const secp256k1_pedersen_commitment* commit, const secp256k1_generator *value_gen, const unsigned char *nonce, const unsigned char *extra_commit, size_t extra_commit_len, unsigned char *message) {
+int secp256k1_bulletproof_rangeproof_rewind(const secp256k1_context* ctx, uint64_t *value, unsigned char *blind, const unsigned char *proof, size_t plen, uint64_t min_value, const secp256k1_pedersen_commitment* commit, const secp256k1_generator *value_gen, const unsigned char *nonce, const unsigned char *extra_commit, size_t extra_commit_len, unsigned char *message) {
     secp256k1_scalar blinds;
     int ret;
 
     VERIFY_CHECK(ctx != NULL);
     ARG_CHECK(value != NULL);
     ARG_CHECK(blind != NULL);
-    ARG_CHECK(gens != NULL);
     ARG_CHECK(proof != NULL);
     ARG_CHECK(commit != NULL);
     ARG_CHECK(value_gen != NULL);
     ARG_CHECK(nonce != NULL);
     ARG_CHECK(extra_commit != NULL || extra_commit_len == 0);
 
-    ret = secp256k1_bulletproof_rangeproof_rewind_impl(value, &blinds, proof, plen, min_value, commit, value_gen, gens->blinding_gen, nonce, extra_commit, extra_commit_len, message);
+    ret = secp256k1_bulletproof_rangeproof_rewind_impl(value, &blinds, proof, plen, min_value, commit, value_gen, nonce, extra_commit, extra_commit_len, message);
     if (ret == 1) {
         secp256k1_scalar_get_b32(blind, &blinds);
     }
@@ -205,7 +204,7 @@ int secp256k1_bulletproof_rangeproof_prove(
     ARG_CHECK(gens != NULL);
     ARG_CHECK(gens->n >= 2 * nbits * n_commits);
     ARG_CHECK(
-        (proof != NULL && plen != NULL && tau_x == NULL && t_one == NULL && t_two == NULL && commits == NULL && private_nonce == NULL) ||
+        (proof != NULL && plen != NULL && tau_x == NULL && t_one == NULL && t_two == NULL && commits == NULL) ||
         (proof == NULL && plen == NULL && tau_x == NULL && t_one != NULL && t_two != NULL && commits != NULL && private_nonce != NULL) ||
         (proof == NULL && plen == NULL && tau_x != NULL && t_one != NULL && t_two != NULL && commits != NULL && private_nonce != NULL) ||
         (proof != NULL && plen != NULL && tau_x != NULL && t_one != NULL && t_two != NULL && commits != NULL && private_nonce != NULL)

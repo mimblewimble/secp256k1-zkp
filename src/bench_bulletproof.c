@@ -88,7 +88,7 @@ static void bench_bulletproof_rangeproof_setup(void* arg) {
     CHECK(secp256k1_bulletproof_rangeproof_verify(data->common->ctx, data->common->scratch, data->common->generators, data->common->proof[0], data->common->plen, NULL, data->commit[0], data->n_commits, data->nbits, data->common->value_gen, NULL, 0) == 1);
     CHECK(secp256k1_bulletproof_rangeproof_verify_multi(data->common->ctx, data->common->scratch, data->common->generators, (const unsigned char **) data->common->proof, data->common->n_proofs, data->common->plen, NULL, (const secp256k1_pedersen_commitment **) data->commit, data->n_commits, data->nbits, data->common->value_gen, NULL, 0) == 1);
     if (data->n_commits == 1) {
-        CHECK(secp256k1_bulletproof_rangeproof_rewind(data->common->ctx, data->common->generators, &v, blind, data->common->proof[0], data->common->plen, 0, data->commit[0], &data->common->value_gen[0], data->common->nonce, NULL, 0, NULL) == 1);
+        CHECK(secp256k1_bulletproof_rangeproof_rewind(data->common->ctx, &v, blind, data->common->proof[0], data->common->plen, 0, data->commit[0], &data->common->value_gen[0], data->common->nonce, NULL, 0, NULL) == 1);
     }
 }
 
@@ -147,7 +147,7 @@ static void bench_bulletproof_rangeproof_rewind_succeed(void* arg) {
     bench_bulletproof_rangeproof_t *data = (bench_bulletproof_rangeproof_t*)arg;
 
     for (i = 0; i < data->common->iters; i++) {
-        CHECK(secp256k1_bulletproof_rangeproof_rewind(data->common->ctx, data->common->generators, &v, blind, data->common->proof[0], data->common->plen, 0, data->commit[0], &data->common->value_gen[0], data->common->nonce, NULL, 0, NULL) == 1);
+        CHECK(secp256k1_bulletproof_rangeproof_rewind(data->common->ctx, &v, blind, data->common->proof[0], data->common->plen, 0, data->commit[0], &data->common->value_gen[0], data->common->nonce, NULL, 0, NULL) == 1);
     }
 }
 
@@ -159,7 +159,7 @@ static void bench_bulletproof_rangeproof_rewind_fail(void* arg) {
 
     data->common->nonce[0] ^= 1;
     for (i = 0; i < data->common->iters; i++) {
-        CHECK(secp256k1_bulletproof_rangeproof_rewind(data->common->ctx, data->common->generators, &v, blind, data->common->proof[0], data->common->plen, 0, data->commit[0], &data->common->value_gen[0], data->common->nonce, NULL, 0, NULL) == 0);
+        CHECK(secp256k1_bulletproof_rangeproof_rewind(data->common->ctx, &v, blind, data->common->proof[0], data->common->plen, 0, data->commit[0], &data->common->value_gen[0], data->common->nonce, NULL, 0, NULL) == 0);
     }
     data->common->nonce[0] ^= 1;
 }
