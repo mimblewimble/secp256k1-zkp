@@ -647,6 +647,26 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_ec_pubkey_combine(
     size_t n
 ) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3);
 
+/** Tweak a private key by inverting it.
+ * Returns: 0 if the input was out of range. 1 otherwise.
+ * Args:   ctx:    pointer to a context object (cannot be NULL).
+ * In/Out: seckey: pointer to a 32-byte private key.
+ */
+SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_ec_privkey_tweak_inv(
+    const secp256k1_context* ctx,
+    unsigned char *seckey
+) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2);
+
+/** Tweak a private key by negating it.
+ * Returns: 0 if the input was out of range. 1 otherwise.
+ * Args:   ctx:    pointer to a context object (cannot be NULL).
+ * In/Out: seckey: pointer to a 32-byte private key.
+ */
+SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_ec_privkey_tweak_neg(
+    const secp256k1_context* ctx,
+    unsigned char *seckey
+) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2);
+
 #ifdef __cplusplus
 }
 #endif

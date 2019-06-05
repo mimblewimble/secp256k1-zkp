@@ -3009,6 +3009,7 @@ void run_ecmult_multi_tests(void) {
     test_ecmult_multi_pippenger_max_points();
     scratch = secp256k1_scratch_create(&ctx->error_callback, 819200);
     test_ecmult_multi(scratch, secp256k1_ecmult_multi_var);
+    test_ecmult_multi(NULL, secp256k1_ecmult_multi_var);
     test_ecmult_multi(scratch, secp256k1_ecmult_pippenger_batch_single);
     test_ecmult_multi(scratch, secp256k1_ecmult_strauss_batch_single);
     secp256k1_scratch_destroy(scratch);
@@ -3988,6 +3989,73 @@ void run_eckey_edge_case_test(void) {
     CHECK(memcmp(&pubkey, zeros, sizeof(secp256k1_pubkey)) > 0);
     CHECK(ecount == 3);
     secp256k1_context_set_illegal_callback(ctx, NULL, NULL);
+    /* Secret key inversion and negation tests */
+    /* Inverse of 1 is 1 */
+    memset(ctmp, 0, 32);
+    ctmp[31] = 0x01;
+    memset(ctmp2, 0, 32);
+    ctmp2[31] = 0x01;
+    CHECK(secp256k1_ec_privkey_tweak_inv(ctx, ctmp2) == 1);
+    CHECK(memcmp(ctmp, ctmp2, 32) == 0);
+    /* Inverse of inverse */
+    secp256k1_scalar tmp_s;
+    random_scalar_order_test(&tmp_s);
+    secp256k1_scalar_get_b32(ctmp, &tmp_s);
+    memcpy(ctmp2, ctmp, 32);
+    CHECK(secp256k1_ec_privkey_tweak_inv(ctx, ctmp2) == 1);
+    CHECK(memcmp(ctmp, ctmp2, 32) != 0);
+    CHECK(secp256k1_ec_privkey_tweak_inv(ctx, ctmp2) == 1);
+    CHECK(memcmp(ctmp, ctmp2, 32) == 0);
+    /* Self times inverse is 1 */
+    random_scalar_order_test(&tmp_s);
+    secp256k1_scalar_get_b32(ctmp, &tmp_s);
+    memcpy(ctmp2, ctmp, 32);
+    CHECK(secp256k1_ec_privkey_tweak_inv(ctx, ctmp2) == 1);
+    CHECK(secp256k1_ec_privkey_tweak_mul(ctx, ctmp, ctmp2) == 1);
+    memset(ctmp2, 0, 32);
+    ctmp2[31] = 0x01;
+    CHECK(memcmp(ctmp, ctmp2, 32) == 0);
+    /* Negated added to self is 0 */
+    random_scalar_order_test(&tmp_s);
+    secp256k1_scalar_get_b32(ctmp, &tmp_s);
+    memcpy(ctmp2, ctmp, 32);
+    CHECK(secp256k1_ec_privkey_tweak_neg(ctx, ctmp2) == 1);
+    CHECK(secp256k1_ec_privkey_tweak_add(ctx, ctmp, ctmp2) == 0);
+    /* Negation of negation */
+    random_scalar_order_test(&tmp_s);
+    secp256k1_scalar_get_b32(ctmp, &tmp_s);
+    memcpy(ctmp2, ctmp, 32);
+    CHECK(secp256k1_ec_privkey_tweak_neg(ctx, ctmp2) == 1);
+    CHECK(memcmp(ctmp, ctmp2, 32) != 0);
+    CHECK(secp256k1_ec_privkey_tweak_neg(ctx, ctmp2) == 1);
+    CHECK(memcmp(ctmp, ctmp2, 32) == 0);
+    /* 2*(-1)*x == (-1)*2*x */
+    random_scalar_order_test(&tmp_s);
+    secp256k1_scalar_get_b32(ctmp, &tmp_s);
+    memcpy(ctmp2, ctmp, 32);
+    CHECK(secp256k1_ec_privkey_tweak_neg(ctx, ctmp) == 1);
+    CHECK(secp256k1_ec_privkey_tweak_add(ctx, ctmp, ctmp) == 1);
+    CHECK(secp256k1_ec_privkey_tweak_add(ctx, ctmp2, ctmp2) == 1);
+    CHECK(secp256k1_ec_privkey_tweak_neg(ctx, ctmp2) == 1);
+    CHECK(memcmp(ctmp, ctmp2, 32) == 0);
+    /* -x == (-1)*x */
+    random_scalar_order_test(&tmp_s);
+    secp256k1_scalar_get_b32(ctmp, &tmp_s);
+    memset(ctmp2, 0, 32);
+    ctmp2[31] = 0x01;
+    CHECK(secp256k1_ec_privkey_tweak_neg(ctx, ctmp2) == 1);
+    CHECK(secp256k1_ec_privkey_tweak_mul(ctx, ctmp2, ctmp) == 1);
+    CHECK(secp256k1_ec_privkey_tweak_neg(ctx, ctmp) == 1);
+    CHECK(memcmp(ctmp, ctmp2, 32) == 0);
+    /* -1/x == 1/(-x) */
+    random_scalar_order_test(&tmp_s);
+    secp256k1_scalar_get_b32(ctmp, &tmp_s);
+    memcpy(ctmp2, ctmp, 32);
+    CHECK(secp256k1_ec_privkey_tweak_neg(ctx, ctmp) == 1);
+    CHECK(secp256k1_ec_privkey_tweak_inv(ctx, ctmp) == 1);
+    CHECK(secp256k1_ec_privkey_tweak_inv(ctx, ctmp2) == 1);
+    CHECK(secp256k1_ec_privkey_tweak_neg(ctx, ctmp2) == 1);
+    CHECK(memcmp(ctmp, ctmp2, 32) == 0);
 }
 
 void random_sign(secp256k1_scalar *sigr, secp256k1_scalar *sigs, const secp256k1_scalar *key, const secp256k1_scalar *msg, int *recid) {
@@ -5048,6 +5116,10 @@ void run_ecdsa_openssl(void) {
 # include "modules/ecdh/tests_impl.h"
 #endif
 
+#ifdef ENABLE_MODULE_SCHNORRSIG
+# include "modules/schnorrsig/tests_impl.h"
+#endif
+
 #ifdef ENABLE_MODULE_RECOVERY
 # include "modules/recovery/tests_impl.h"
 #endif
@@ -5186,6 +5258,11 @@ int main(int argc, char **argv) {
 #ifdef ENABLE_MODULE_ECDH
     /* ecdh tests */
     run_ecdh_tests();
+#endif
+
+#ifdef ENABLE_MODULE_SCHNORRSIG
+    /* Schnorrsig tests */
+    run_schnorrsig_tests();
 #endif
 
     /* ecdsa tests */

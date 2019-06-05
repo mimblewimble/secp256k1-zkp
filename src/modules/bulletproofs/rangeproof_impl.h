@@ -528,10 +528,10 @@ static int secp256k1_bulletproof_rangeproof_prove_impl(
         secp256k1_scalar vals;
         secp256k1_scalar_set_u64(&vals, value[0]);
         if (message != NULL) {
-            /* Combine value with 16 bytes of optional message */
+            /* Combine value with 20 bytes of optional message */
             secp256k1_scalar_get_b32(vals_bytes, &vals);
-            for (i=0; i<16; i++) {
-                vals_bytes[i+8] = message[i];
+            for (i=0; i<20; i++) {
+                vals_bytes[i+4] = message[i];
             }
             secp256k1_scalar_set_b32(&vals, vals_bytes, &overflow);
         }
@@ -721,16 +721,15 @@ static int secp256k1_bulletproof_rangeproof_prove_impl(
     return 1;
 }
 
-static int secp256k1_bulletproof_rangeproof_rewind_impl(uint64_t *value, secp256k1_scalar *blind, const unsigned char *proof, const size_t plen, uint64_t min_value, const secp256k1_pedersen_commitment *pcommit, const secp256k1_generator *value_gen, const secp256k1_ge *blind_gen, const unsigned char *nonce, const unsigned char *extra_commit, size_t extra_commit_len, unsigned char *message) {
+static int secp256k1_bulletproof_rangeproof_rewind_impl(uint64_t *value, secp256k1_scalar *blind, const unsigned char *proof, const size_t plen, uint64_t min_value, const secp256k1_pedersen_commitment *pcommit, const secp256k1_generator *value_gen, const unsigned char *nonce, const unsigned char *extra_commit, size_t extra_commit_len, unsigned char *message) {
     secp256k1_sha256 sha256;
-    static const unsigned char zero8[8] = { 0 };
+    static const unsigned char zero4[4] = { 0 };
     unsigned char commit[32] = { 0 };
     unsigned char lrparity;
     secp256k1_scalar taux, mu;
     secp256k1_scalar alpha, rho, tau1, tau2;
     secp256k1_scalar x, z;
     secp256k1_ge commitp, value_genp;
-    secp256k1_gej rewind_commitj;
     int overflow, i;
 
     if (plen < 64 + 128 + 1 || plen > SECP256K1_BULLETPROOF_MAX_PROOF) {
@@ -819,7 +818,7 @@ static int secp256k1_bulletproof_rangeproof_rewind_impl(uint64_t *value, secp256
     secp256k1_scalar_add(&mu, &mu, &alpha);
 
     secp256k1_scalar_get_b32(commit, &mu);
-    if (memcmp(commit, zero8, 8) != 0) {
+    if (memcmp(commit, zero4, 4) != 0) {
         return 0;
     }
     *value = commit[31] + ((uint64_t) commit[30] << 8) +
@@ -828,8 +827,8 @@ static int secp256k1_bulletproof_rangeproof_rewind_impl(uint64_t *value, secp256
              ((uint64_t) commit[25] << 48) + ((uint64_t) commit[24] << 56);
 
     if (message != NULL) {
-        for (i=23; i >= 8; i--) {
-            message[i-8] = commit[i];
+        for (i=23; i >= 4; i--) {
+            message[i-4] = commit[i];
         }
     }
 
@@ -846,11 +845,7 @@ static int secp256k1_bulletproof_rangeproof_rewind_impl(uint64_t *value, secp256
     secp256k1_scalar_mul(blind, &taux, &z);
     secp256k1_scalar_negate(blind, blind);
 
-    secp256k1_pedersen_ecmult(&rewind_commitj, blind, *value, &value_genp, blind_gen);
-    secp256k1_gej_neg(&rewind_commitj, &rewind_commitj);
-    secp256k1_gej_add_ge_var(&rewind_commitj, &rewind_commitj, &commitp, NULL);
-
-    return secp256k1_gej_is_infinity(&rewind_commitj);
+    return 1;
 }
 
 #endif

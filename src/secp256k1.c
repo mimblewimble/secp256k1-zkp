@@ -342,6 +342,27 @@ static SECP256K1_INLINE void buffer_append(unsigned char *buf, unsigned int *off
     *offset += len;
 }
 
+/* This nonce function is described in BIP-schnorr
+ * (https://github.com/sipa/bips/blob/bip-schnorr/bip-schnorr.mediawiki) */
+static int secp256k1_nonce_function_bipschnorr(unsigned char* nonce32, const unsigned char* msg32, const unsigned char* key32, const unsigned char* algo16, void* data, unsigned int counter) {
+	secp256k1_sha256 sha;
+	(void)data;
+	(void)counter;
+	VERIFY_CHECK(counter == 0);
+
+	/* Hash x||msg as per the spec */
+	secp256k1_sha256_initialize(&sha);
+	secp256k1_sha256_write(&sha, key32, 32);
+	secp256k1_sha256_write(&sha, msg32, 32);
+	/* Hash in algorithm, which is not in the spec, but may be critical to
+	 * users depending on it to avoid nonce reuse across algorithms. */
+	if (algo16 != NULL) {
+		secp256k1_sha256_write(&sha, algo16, 16);
+	}
+	secp256k1_sha256_finalize(&sha, nonce32);
+	return 1;
+}
+
 static int nonce_function_rfc6979(unsigned char *nonce32, const unsigned char *msg32, const unsigned char *key32, const unsigned char *algo16, void *data, unsigned int counter) {
    unsigned char keydata[112];
    unsigned int offset = 0;
@@ -608,6 +629,46 @@ int secp256k1_ec_pubkey_combine(const secp256k1_context* ctx, secp256k1_pubkey *
     return 1;
 }
 
+int secp256k1_ec_privkey_tweak_inv(const secp256k1_context* ctx, unsigned char *seckey) {
+    secp256k1_scalar sec;
+    secp256k1_scalar inv;
+    int ret = 0;
+    int overflow = 0;
+    VERIFY_CHECK(ctx != NULL);
+    ARG_CHECK(seckey != NULL);
+
+    secp256k1_scalar_set_b32(&sec, seckey, &overflow);
+    ret = !overflow;
+    memset(seckey, 0, 32);
+    if (ret) {
+        secp256k1_scalar_inverse(&inv, &sec);
+        secp256k1_scalar_get_b32(seckey, &inv);
+        secp256k1_scalar_clear(&inv);
+    }
+    secp256k1_scalar_clear(&sec);
+    return ret;
+}
+
+int secp256k1_ec_privkey_tweak_neg(const secp256k1_context* ctx, unsigned char *seckey) {
+    secp256k1_scalar sec;
+    secp256k1_scalar neg;
+    int ret = 0;
+    int overflow = 0;
+    VERIFY_CHECK(ctx != NULL);
+    ARG_CHECK(seckey != NULL);
+
+    secp256k1_scalar_set_b32(&sec, seckey, &overflow);
+    ret = !overflow;
+    memset(seckey, 0, 32);
+    if (ret) {
+        secp256k1_scalar_negate(&neg, &sec);
+        secp256k1_scalar_get_b32(seckey, &neg);
+        secp256k1_scalar_clear(&neg);
+    }
+    secp256k1_scalar_clear(&sec);
+    return ret;
+}
+
 #ifdef ENABLE_MODULE_ECDH
 # include "modules/ecdh/main_impl.h"
 #endif
@@ -634,6 +695,10 @@ int secp256k1_ec_pubkey_combine(const secp256k1_context* ctx, secp256k1_pubkey *
 
 #ifdef ENABLE_MODULE_AGGSIG
 # include "modules/aggsig/main_impl.h"
+#endif
+
+#ifdef ENABLE_MODULE_SCHNORRSIG
+# include "modules/schnorrsig/main_impl.h"
 #endif
 
 #ifdef ENABLE_MODULE_WHITELIST
