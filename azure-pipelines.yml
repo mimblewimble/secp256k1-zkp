@@ -41,353 +41,354 @@ variables:
   RECOVERY: no
   EXPERIMENTAL: no
   JNI: no
-  GUAVA_URL: https://search.maven.org/remotecontent?filepath=com/google/guava/guava/18.0/guava-18.0.jar GUAVA_JAR=src/java/guava/guava-18.0.jar
+  GUAVA_URL: https://search.maven.org/remotecontent?filepath=com/google/guava/guava/18.0/guava-18.0.jar
+  GUAVA_JAR: src/java/guava/guava-18.0.jar
 
 jobs:
-  - job: clang-with-endomorphism
+- job: clang-with-endomorphism
+  variables:
+    HOST: i686-linux-gnu
+    ENDOMORPHISM: yes
+  strategy:
+    matrix:
+      job1:
+        SCALAR: 32bit
+        RECOVERY: yes
+      job2:
+        SCALAR: 32bit
+        FIELD: 32bit
+        ECDH: yes
+        EXPERIMENTAL: yes
+      job3:
+        SCALAR: 32bit
+        FIELD: 32bit
+        ECDH: yes
+        EXPERIMENTAL: yes
+        GENERATOR: yes
+        COMMITMENT: yes
+        RANGEPROOF: yes
+        BULLETPROOF: yes
+        WHITELIST: yes
+        SURJECTIONPROOF: yes
+        SCHNORRSIG: yes
+      job4:
+        SCALAR: 64bit
+      job5:
+        FIELD: 64bit
+        RECOVERY: yes
+      job6:
+        FIELD: 64bit
+        ENDOMORPHISM: yes
+      job7:
+        FIELD: 64bit
+        ENDOMORPHISM: yes
+        ECDH: yes
+        EXPERIMENTAL: yes
+      job8:
+        FIELD: 64bit
+        ENDOMORPHISM: yes
+        ECDH: yes
+        EXPERIMENTAL: yes
+        GENERATOR: yes
+        COMMITMENT: yes
+        RANGEPROOF: yes
+        BULLETPROOF: yes
+        WHITELIST: yes
+        SURJECTIONPROOF: yes
+        SCHNORRSIG: yes
+      job9:
+        FIELD: 64bit
+        ASM: x86_64
+      job10:
+        FIELD: 64bit
+        ENDOMORPHISM: yes
+        ASM: x86_64
+      job11:
+        FIELD: 32bit
+        ENDOMORPHISM: yes
+      job12:
+        BIGNUM: no
+      job13:
+        BIGNUM: no
+        ENDOMORPHISM: yes
+        RECOVERY: yes
+        EXPERIMENTAL: yes  
+      job14:
+        BIGNUM: no
+        STATICPRECOMPUTATION: no
+      job15:
+        EXTRAFLAGS: CPPFLAGS=-DDETERMINISTIC
+        CI_JOB_ARGS: servers
+      job16:
+        EXTRAFLAGS: CFLAGS=-O0
+        CI_JOB_ARGS: servers
+      job17:
+        BUILD: check-java
+        JNI: yes
+        ECDH: yes
+        EXPERIMENTAL: yes                            
+  steps:
+    - script: |
+      sudo apt install -y gcc-multilib libgmp-dev:i386
+      displayName: Install dependencies
+    - template: '.ci/test.yml'
+- job: clang
     variables:
       HOST: i686-linux-gnu
-      ENDOMORPHISM: yes
-    strategy:
-      matrix:
-        job1:
-          SCALAR: 32bit
-          RECOVERY: yes
-        job2:
-          SCALAR: 32bit
-          FIELD: 32bit
-          ECDH: yes
-          EXPERIMENTAL: yes
-        job3:
-          SCALAR: 32bit
-          FIELD: 32bit
-          ECDH: yes
-          EXPERIMENTAL: yes
-          GENERATOR: yes
-          COMMITMENT: yes
-          RANGEPROOF: yes
-          BULLETPROOF: yes
-          WHITELIST: yes
-          SURJECTIONPROOF: yes
-          SCHNORRSIG: yes
-        job4:
-          SCALAR: 64bit
-        job5:
-          FIELD: 64bit
-          RECOVERY: yes
-        job6:
-          FIELD: 64bit
-          ENDOMORPHISM: yes
-        job7:
-          FIELD: 64bit
-          ENDOMORPHISM: yes
-          ECDH: yes
-          EXPERIMENTAL: yes
-        job8:
-          FIELD: 64bit
-          ENDOMORPHISM: yes
-          ECDH: yes
-          EXPERIMENTAL: yes
-          GENERATOR: yes
-          COMMITMENT: yes
-          RANGEPROOF: yes
-          BULLETPROOF: yes
-          WHITELIST: yes
-          SURJECTIONPROOF: yes
-          SCHNORRSIG: yes
-        job9:
-          FIELD: 64bit
-          ASM: x86_64
-        job10:
-          FIELD: 64bit
-          ENDOMORPHISM: yes
-          ASM: x86_64
-        job11:
-          FIELD: 32bit
-          ENDOMORPHISM: yes
-        job12:
-          BIGNUM: no
-        job13:
-          BIGNUM: no
-          ENDOMORPHISM: yes
-          RECOVERY: yes
-          EXPERIMENTAL: yes  
-        job14:
-          BIGNUM: no
-          STATICPRECOMPUTATION: no
-        job15:
-          EXTRAFLAGS: CPPFLAGS=-DDETERMINISTIC
-          CI_JOB_ARGS: servers
-        job16:
-          EXTRAFLAGS: CFLAGS=-O0
-          CI_JOB_ARGS: servers
-        job17:
-          BUILD: check-java
-          JNI: yes
-          ECDH: yes
-          EXPERIMENTAL: yes                            
-    steps:
-      - script: |
-        sudo apt install -y gcc-multilib libgmp-dev:i386
-        displayName: Install dependencies
-      - template: '.ci/test.yml'
-  - job: clang
-    variables:
-      HOST: i686-linux-gnu
-    strategy:
-      matrix:
-        job1:
-          SCALAR: 32bit
-          RECOVERY: yes
-        job2:
-          SCALAR: 32bit
-          FIELD: 32bit
-          ECDH: yes
-          EXPERIMENTAL: yes
-        job3:
-          SCALAR: 32bit
-          FIELD: 32bit
-          ECDH: yes
-          EXPERIMENTAL: yes
-          GENERATOR: yes
-          COMMITMENT: yes
-          RANGEPROOF: yes
-          BULLETPROOF: yes
-          WHITELIST: yes
-          SURJECTIONPROOF: yes
-          SCHNORRSIG: yes
-        job4:
-          SCALAR: 64bit
-        job5:
-          FIELD: 64bit
-          RECOVERY: yes
-        job6:
-          FIELD: 64bit
-          ENDOMORPHISM: yes
-        job7:
-          FIELD: 64bit
-          ENDOMORPHISM: yes
-          ECDH: yes
-          EXPERIMENTAL: yes
-        job8:
-          FIELD: 64bit
-          ENDOMORPHISM: yes
-          ECDH: yes
-          EXPERIMENTAL: yes
-          GENERATOR: yes
-          COMMITMENT: yes
-          RANGEPROOF: yes
-          BULLETPROOF: yes
-          WHITELIST: yes
-          SURJECTIONPROOF: yes
-          SCHNORRSIG: yes
-        job9:
-          FIELD: 64bit
-          ASM: x86_64
-        job10:
-          FIELD: 64bit
-          ENDOMORPHISM: yes
-          ASM: x86_64
-        job11:
-          FIELD: 32bit
-          ENDOMORPHISM: yes
-        job12:
-          BIGNUM: no
-        job13:
-          BIGNUM: no
-          ENDOMORPHISM: yes
-          RECOVERY: yes
-          EXPERIMENTAL: yes  
-        job14:
-          BIGNUM: no
-          STATICPRECOMPUTATION: no
-        job15:
-          EXTRAFLAGS: CPPFLAGS=-DDETERMINISTIC
-          CI_JOB_ARGS: servers
-        job16:
-          EXTRAFLAGS: CFLAGS=-O0
-          CI_JOB_ARGS: servers
-        job17:
-          BUILD: check-java
-          JNI: yes
-          ECDH: yes
-          EXPERIMENTAL: yes                            
-    steps:
-      - script: |
-        sudo apt install -y gcc-multilib
-        displayName: Install dependencies
-      - template: '.ci/test.yml'
-  - job: gcc-with-endomorphism
-    variables:
-      HOST: i686-linux-gnu
-      ENDOMORPHISM: yes
-    strategy:
-      matrix:
-        job1:
-          SCALAR: 32bit
-          RECOVERY: yes
-        job2:
-          SCALAR: 32bit
-          FIELD: 32bit
-          ECDH: yes
-          EXPERIMENTAL: yes
-        job3:
-          SCALAR: 32bit
-          FIELD: 32bit
-          ECDH: yes
-          EXPERIMENTAL: yes
-          GENERATOR: yes
-          COMMITMENT: yes
-          RANGEPROOF: yes
-          BULLETPROOF: yes
-          WHITELIST: yes
-          SURJECTIONPROOF: yes
-          SCHNORRSIG: yes
-        job4:
-          SCALAR: 64bit
-        job5:
-          FIELD: 64bit
-          RECOVERY: yes
-        job6:
-          FIELD: 64bit
-          ENDOMORPHISM: yes
-        job7:
-          FIELD: 64bit
-          ENDOMORPHISM: yes
-          ECDH: yes
-          EXPERIMENTAL: yes
-        job8:
-          FIELD: 64bit
-          ENDOMORPHISM: yes
-          ECDH: yes
-          EXPERIMENTAL: yes
-          GENERATOR: yes
-          COMMITMENT: yes
-          RANGEPROOF: yes
-          BULLETPROOF: yes
-          WHITELIST: yes
-          SURJECTIONPROOF: yes
-          SCHNORRSIG: yes
-        job9:
-          FIELD: 64bit
-          ASM: x86_64
-        job10:
-          FIELD: 64bit
-          ENDOMORPHISM: yes
-          ASM: x86_64
-        job11:
-          FIELD: 32bit
-          ENDOMORPHISM: yes
-        job12:
-          BIGNUM: no
-        job13:
-          BIGNUM: no
-          ENDOMORPHISM: yes
-          RECOVERY: yes
-          EXPERIMENTAL: yes  
-        job14:
-          BIGNUM: no
-          STATICPRECOMPUTATION: no
-        job15:
-          EXTRAFLAGS: CPPFLAGS=-DDETERMINISTIC
-          CI_JOB_ARGS: servers
-        job16:
-          EXTRAFLAGS: CFLAGS=-O0
-          CI_JOB_ARGS: servers
-        job17:
-          BUILD: check-java
-          JNI: yes
-          ECDH: yes
-          EXPERIMENTAL: yes                            
+  strategy:
+    matrix:
+      job1:
+        SCALAR: 32bit
+        RECOVERY: yes
+      job2:
+        SCALAR: 32bit
+        FIELD: 32bit
+        ECDH: yes
+        EXPERIMENTAL: yes
+      job3:
+        SCALAR: 32bit
+        FIELD: 32bit
+        ECDH: yes
+        EXPERIMENTAL: yes
+        GENERATOR: yes
+        COMMITMENT: yes
+        RANGEPROOF: yes
+        BULLETPROOF: yes
+        WHITELIST: yes
+        SURJECTIONPROOF: yes
+        SCHNORRSIG: yes
+      job4:
+        SCALAR: 64bit
+      job5:
+        FIELD: 64bit
+        RECOVERY: yes
+      job6:
+        FIELD: 64bit
+        ENDOMORPHISM: yes
+      job7:
+        FIELD: 64bit
+        ENDOMORPHISM: yes
+        ECDH: yes
+        EXPERIMENTAL: yes
+      job8:
+        FIELD: 64bit
+        ENDOMORPHISM: yes
+        ECDH: yes
+        EXPERIMENTAL: yes
+        GENERATOR: yes
+        COMMITMENT: yes
+        RANGEPROOF: yes
+        BULLETPROOF: yes
+        WHITELIST: yes
+        SURJECTIONPROOF: yes
+        SCHNORRSIG: yes
+      job9:
+        FIELD: 64bit
+        ASM: x86_64
+      job10:
+        FIELD: 64bit
+        ENDOMORPHISM: yes
+        ASM: x86_64
+      job11:
+        FIELD: 32bit
+        ENDOMORPHISM: yes
+      job12:
+        BIGNUM: no
+      job13:
+        BIGNUM: no
+        ENDOMORPHISM: yes
+        RECOVERY: yes
+        EXPERIMENTAL: yes  
+      job14:
+        BIGNUM: no
+        STATICPRECOMPUTATION: no
+      job15:
+        EXTRAFLAGS: CPPFLAGS=-DDETERMINISTIC
+        CI_JOB_ARGS: servers
+      job16:
+        EXTRAFLAGS: CFLAGS=-O0
+        CI_JOB_ARGS: servers
+      job17:
+        BUILD: check-java
+        JNI: yes
+        ECDH: yes
+        EXPERIMENTAL: yes                           
     steps:
       - script: |
         sudo apt install -y gcc-multilib
         displayName: Install dependencies
       - template: '.ci/test.yml'
+- job: gcc-with-endomorphism
+  variables:
+    HOST: i686-linux-gnu
+    ENDOMORPHISM: yes
+  strategy:
+    matrix:
+      job1:
+        SCALAR: 32bit
+        RECOVERY: yes
+      job2:
+        SCALAR: 32bit
+        FIELD: 32bit
+        ECDH: yes
+        EXPERIMENTAL: yes
+      job3:
+        SCALAR: 32bit
+        FIELD: 32bit
+        ECDH: yes
+        EXPERIMENTAL: yes
+        GENERATOR: yes
+        COMMITMENT: yes
+        RANGEPROOF: yes
+        BULLETPROOF: yes
+        WHITELIST: yes
+        SURJECTIONPROOF: yes
+        SCHNORRSIG: yes
+      job4:
+        SCALAR: 64bit
+      job5:
+        FIELD: 64bit
+        RECOVERY: yes
+      job6:
+        FIELD: 64bit
+        ENDOMORPHISM: yes
+      job7:
+        FIELD: 64bit
+        ENDOMORPHISM: yes
+        ECDH: yes
+        EXPERIMENTAL: yes
+      job8:
+        FIELD: 64bit
+        ENDOMORPHISM: yes
+        ECDH: yes
+        EXPERIMENTAL: yes
+        GENERATOR: yes
+        COMMITMENT: yes
+        RANGEPROOF: yes
+        BULLETPROOF: yes
+        WHITELIST: yes
+        SURJECTIONPROOF: yes
+        SCHNORRSIG: yes
+      job9:
+        FIELD: 64bit
+        ASM: x86_64
+      job10:
+        FIELD: 64bit
+        ENDOMORPHISM: yes
+        ASM: x86_64
+      job11:
+        FIELD: 32bit
+        ENDOMORPHISM: yes
+      job12:
+        BIGNUM: no
+      job13:
+        BIGNUM: no
+        ENDOMORPHISM: yes
+        RECOVERY: yes
+        EXPERIMENTAL: yes  
+      job14:
+        BIGNUM: no
+        STATICPRECOMPUTATION: no
+      job15:
+        EXTRAFLAGS: CPPFLAGS=-DDETERMINISTIC
+        CI_JOB_ARGS: servers
+      job16:
+        EXTRAFLAGS: CFLAGS=-O0
+        CI_JOB_ARGS: servers
+      job17:
+        BUILD: check-java
+        JNI: yes
+        ECDH: yes
+        EXPERIMENTAL: yes                    
+  steps:
+    - script: |
+      sudo apt install -y gcc-multilib
+      displayName: Install dependencies
+    - template: '.ci/test.yml'
 
-  - job: gcc
-    variables:
-      HOST: i686-linux-gnu
-    strategy:
-      matrix:
-        job1:
-          SCALAR: 32bit
-          RECOVERY: yes
-        job2:
-          SCALAR: 32bit
-          FIELD: 32bit
-          ECDH: yes
-          EXPERIMENTAL: yes
-        job3:
-          SCALAR: 32bit
-          FIELD: 32bit
-          ECDH: yes
-          EXPERIMENTAL: yes
-          GENERATOR: yes
-          COMMITMENT: yes
-          RANGEPROOF: yes
-          BULLETPROOF: yes
-          WHITELIST: yes
-          SURJECTIONPROOF: yes
-          SCHNORRSIG: yes
-        job4:
-          SCALAR: 64bit
-        job5:
-          FIELD: 64bit
-          RECOVERY: yes
-        job6:
-          FIELD: 64bit
-          ENDOMORPHISM: yes
-        job7:
-          FIELD: 64bit
-          ENDOMORPHISM: yes
-          ECDH: yes
-          EXPERIMENTAL: yes
-        job8:
-          FIELD: 64bit
-          ENDOMORPHISM: yes
-          ECDH: yes
-          EXPERIMENTAL: yes
-          GENERATOR: yes
-          COMMITMENT: yes
-          RANGEPROOF: yes
-          BULLETPROOF: yes
-          WHITELIST: yes
-          SURJECTIONPROOF: yes
-          SCHNORRSIG: yes
-        job9:
-          FIELD: 64bit
-          ASM: x86_64
-        job10:
-          FIELD: 64bit
-          ENDOMORPHISM: yes
-          ASM: x86_64
-        job11:
-          FIELD: 32bit
-          ENDOMORPHISM: yes
-        job12:
-          BIGNUM: no
-        job13:
-          BIGNUM: no
-          ENDOMORPHISM: yes
-          RECOVERY: yes
-          EXPERIMENTAL: yes  
-        job14:
-          BIGNUM: no
-          STATICPRECOMPUTATION: no
-        job15:
-          EXTRAFLAGS: CPPFLAGS=-DDETERMINISTIC
-          CI_JOB_ARGS: servers
-        job16:
-          EXTRAFLAGS: CFLAGS=-O0
-          CI_JOB_ARGS: servers
-        job17:
-          BUILD: check-java
-          JNI: yes
-          ECDH: yes
-          EXPERIMENTAL: yes                            
-    steps:
-      - script: |
-        sudo apt install -y gcc-multilib libgmp-dev:i386
-        displayName: Install dependencies
-      - template: '.ci/test.yml'
+- job: gcc
+  variables:
+    HOST: i686-linux-gnu
+  strategy:
+    matrix:
+      job1:
+        SCALAR: 32bit
+        RECOVERY: yes
+      job2:
+        SCALAR: 32bit
+        FIELD: 32bit
+        ECDH: yes
+        EXPERIMENTAL: yes
+      job3:
+        SCALAR: 32bit
+        FIELD: 32bit
+        ECDH: yes
+        EXPERIMENTAL: yes
+        GENERATOR: yes
+        COMMITMENT: yes
+        RANGEPROOF: yes
+        BULLETPROOF: yes
+        WHITELIST: yes
+        SURJECTIONPROOF: yes
+        SCHNORRSIG: yes
+      job4:
+        SCALAR: 64bit
+      job5:
+        FIELD: 64bit
+        RECOVERY: yes
+      job6:
+        FIELD: 64bit
+        ENDOMORPHISM: yes
+      job7:
+        FIELD: 64bit
+        ENDOMORPHISM: yes
+        ECDH: yes
+        EXPERIMENTAL: yes
+      job8:
+        FIELD: 64bit
+        ENDOMORPHISM: yes
+        ECDH: yes
+        EXPERIMENTAL: yes
+        GENERATOR: yes
+        COMMITMENT: yes
+        RANGEPROOF: yes
+        BULLETPROOF: yes
+        WHITELIST: yes
+        SURJECTIONPROOF: yes
+        SCHNORRSIG: yes
+      job9:
+        FIELD: 64bit
+        ASM: x86_64
+      job10:
+        FIELD: 64bit
+        ENDOMORPHISM: yes
+        ASM: x86_64
+      job11:
+        FIELD: 32bit
+        ENDOMORPHISM: yes
+      job12:
+        BIGNUM: no
+      job13:
+        BIGNUM: no
+        ENDOMORPHISM: yes
+        RECOVERY: yes
+        EXPERIMENTAL: yes  
+      job14:
+        BIGNUM: no
+        STATICPRECOMPUTATION: no
+      job15:
+        EXTRAFLAGS: CPPFLAGS=-DDETERMINISTIC
+        CI_JOB_ARGS: servers
+      job16:
+        EXTRAFLAGS: CFLAGS=-O0
+        CI_JOB_ARGS: servers
+      job17:
+        BUILD: check-java
+        JNI: yes
+        ECDH: yes
+        EXPERIMENTAL: yes                   
+  steps:
+    - script: |
+      sudo apt install -y gcc-multilib libgmp-dev:i386
+      displayName: Install dependencies
+    - template: '.ci/test.yml'
