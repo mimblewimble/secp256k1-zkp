@@ -177,7 +177,10 @@ static void shallue_van_de_woestijne(secp256k1_ge* ge, const secp256k1_fe* t) {
      * determine the Jacobi symbol of the produced y coordinate. Since the
      * rest of the algorithm only uses t^2, we can safely use another criterion
      * as long as negation of t results in negation of the y coordinate. Here
-     * we choose to use t's oddness, as it is faster to determine. */
+     * we choose to use t's oddness, as it is faster to determine. 
+     
+     * this is acceptable only because the solution from secp256k1_fe_sqrt is always a square.
+     */
     secp256k1_fe_negate(&tmp, &ge->y, 1);
     secp256k1_fe_cmov(&ge->y, &tmp, secp256k1_fe_is_odd(t));
 }
