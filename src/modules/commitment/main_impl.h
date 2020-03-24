@@ -161,6 +161,22 @@ int secp256k1_pedersen_commitment_to_pubkey(const secp256k1_context* ctx, secp25
     return 1;
 }
 
+int secp256k1_pubkey_to_pedersen_commitment(const secp256k1_context* ctx, secp256k1_pedersen_commitment* commit, const secp256k1_pubkey* pubkey)  {
+    secp256k1_ge Q;
+    secp256k1_fe fe;
+    VERIFY_CHECK(ctx != NULL);
+    ARG_CHECK(commit != NULL);
+    memset(commit, 0, sizeof(*commit));
+    ARG_CHECK(pubkey != NULL);
+
+    secp256k1_fe_set_b32(&fe, &pubkey->data[0]);
+    secp256k1_ge_set_xquad(&Q, &fe);
+    secp256k1_pedersen_commitment_save(commit, &Q);
+
+    secp256k1_ge_clear(&Q);
+    return 1;
+}
+
 /** Takes a list of n pointers to 32 byte blinding values, the first negs of which are treated with positive sign and the rest
  *  negative, then calculates an additional blinding value that adds to zero.
  */

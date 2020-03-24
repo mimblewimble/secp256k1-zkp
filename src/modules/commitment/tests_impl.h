@@ -19,12 +19,16 @@
 static void test_commitment_api(void) {
     secp256k1_pedersen_commitment commit;
     secp256k1_pedersen_commitment commit2;
+    secp256k1_pubkey pubkey;
     const secp256k1_pedersen_commitment *commit_ptr = &commit;
     unsigned char blind[32];
     unsigned char blind_out[32];
     const unsigned char *blind_ptr = blind;
     unsigned char *blind_out_ptr = blind_out;
     uint64_t val = secp256k1_rand32();
+    secp256k1_scalar tmp_s;
+    unsigned char out[33];
+    unsigned char out2[33];
 
     secp256k1_context *none = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
     secp256k1_context *sign = secp256k1_context_create(SECP256K1_CONTEXT_SIGN);
@@ -96,9 +100,6 @@ static void test_commitment_api(void) {
 
     /* Test commit with integer and blinding factor */
     /* Value: 1*/
-    secp256k1_scalar tmp_s;
-    unsigned char out[33];
-    unsigned char out2[33];
     random_scalar_order_test(&tmp_s);
     secp256k1_scalar_get_b32(blind, &tmp_s);
     memset(blind_out, 0, 32);
@@ -132,6 +133,10 @@ static void test_commitment_api(void) {
     CHECK(secp256k1_pedersen_blind_commit(sign, &commit2, blind, blind_out, &secp256k1_generator_const_h, &secp256k1_generator_const_g) == 1);
     CHECK(secp256k1_pedersen_commitment_serialize(sign, out2, &commit2) == 1);
     CHECK(memcmp(out, out2, 33) == 0);
+
+    /* Test conversion of commit to pubkey and back */
+    CHECK(secp256k1_pedersen_commitment_to_pubkey(sign, &pubkey, &commit) == 1);
+    CHECK(secp256k1_pubkey_to_pedersen_commitment(sign, &commit, &pubkey) == 1);
 
     secp256k1_context_destroy(none);
     secp256k1_context_destroy(sign);
