@@ -163,31 +163,17 @@ int secp256k1_pedersen_commitment_to_pubkey(const secp256k1_context* ctx, secp25
 }
 
 int secp256k1_pubkey_to_pedersen_commitment(const secp256k1_context* ctx, secp256k1_pedersen_commitment* commit, const secp256k1_pubkey* pubkey)  {
-    secp256k1_fe fe;
-    secp256k1_ge P, Q;
-    int i;
+    secp256k1_ge P;
 
-    unsigned char commit_raw[32];
     VERIFY_CHECK(ctx != NULL);
     ARG_CHECK(commit != NULL);
     memset(commit, 0, sizeof(*commit));
     ARG_CHECK(pubkey != NULL);
 
-   for (i = 0; i<32; i++){
-      commit_raw[i] = pubkey->data[31-i];
-    }
-
-    secp256k1_fe_set_b32(&fe, &commit_raw[0]);
-    secp256k1_ge_set_xquad(&Q, &fe);
-
     secp256k1_pubkey_load(ctx, &P, pubkey);
-    if (!secp256k1_fe_is_quad_var(&P.y)) {
-        secp256k1_ge_neg(&Q, &Q);
-    }
+    secp256k1_pedersen_commitment_save(commit, &P);
 
-    secp256k1_pedersen_commitment_save(commit, &Q);
     secp256k1_ge_clear(&P);
-    secp256k1_ge_clear(&Q);
     return 1;
 }
 
