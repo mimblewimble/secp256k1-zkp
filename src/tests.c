@@ -3769,6 +3769,7 @@ void run_eckey_edge_case_test(void) {
     secp256k1_pubkey pubkey2;
     secp256k1_pubkey pubkey_one;
     secp256k1_pubkey pubkey_negone;
+    secp256k1_scalar tmp_s;
     const secp256k1_pubkey *pubkeys[3];
     size_t len;
     int32_t ecount;
@@ -3998,7 +3999,6 @@ void run_eckey_edge_case_test(void) {
     CHECK(secp256k1_ec_privkey_tweak_inv(ctx, ctmp2) == 1);
     CHECK(memcmp(ctmp, ctmp2, 32) == 0);
     /* Inverse of inverse */
-    secp256k1_scalar tmp_s;
     random_scalar_order_test(&tmp_s);
     secp256k1_scalar_get_b32(ctmp, &tmp_s);
     memcpy(ctmp2, ctmp, 32);
