@@ -136,7 +136,8 @@ static void test_commitment_api(void) {
 
     /* Test conversion of commit to pubkey and back */
     CHECK(secp256k1_pedersen_commitment_to_pubkey(sign, &pubkey, &commit) == 1);
-    CHECK(secp256k1_pubkey_to_pedersen_commitment(sign, &commit, &pubkey) == 1);
+    CHECK(secp256k1_pubkey_to_pedersen_commitment(sign, &commit2, &pubkey) == 1);
+    CHECK(memcmp(&commit.data, &commit2.data, 33) == 0);
 
     secp256k1_context_destroy(none);
     secp256k1_context_destroy(sign);
