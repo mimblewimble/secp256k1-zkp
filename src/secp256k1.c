@@ -39,6 +39,10 @@
 # include "include/secp256k1_aggsig.h"
 #endif
 
+#ifdef ENABLE_MODULE_MLSAG
+# include "include/secp256k1_mlsag.h"
+#endif
+
 #define ARG_CHECK(cond) do { \
     if (EXPECT(!(cond), 0)) { \
         secp256k1_callback_call(&ctx->illegal_callback, #cond); \
@@ -707,4 +711,8 @@ int secp256k1_ec_privkey_tweak_neg(const secp256k1_context* ctx, unsigned char *
 
 #ifdef ENABLE_MODULE_SURJECTIONPROOF
 # include "modules/surjection/main_impl.h"
+#endif
+
+#ifdef ENABLE_MODULE_MLSAG
+# include "modules/mlsag/main_impl.h"
 #endif
