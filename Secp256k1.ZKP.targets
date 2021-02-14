@@ -6,6 +6,7 @@
     <Content Include="$(MSBuildThisFileDirectory)..\..\runtimes\win-x64\native\**\*" Condition=" '$(OS)' == 'Windows_NT' and '$(Platform)' == 'x64' ">
       <PackageCopyToOutput>true</PackageCopyToOutput>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
       <Visible>true</Visible>
       <Pack>false</Pack>
     </Content>
@@ -14,6 +15,7 @@
     <Content Include="$(MSBuildThisFileDirectory)....\runtimes\win-x86\native*\" Condition=" '$(OS)' == 'Windows_NT' and '$(Platform)' == 'x86' ">
       <PackageCopyToOutput>true</PackageCopyToOutput>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
       <Visible>true</Visible>
       <Pack>false</Pack>
     </Content>
@@ -22,6 +24,7 @@
     <Content Include="$(MSBuildThisFileDirectory)..\..\runtimes\linux-x64\native\**\*" Condition=" '$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Linux)))' ">
       <PackageCopyToOutput>true</PackageCopyToOutput>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
       <Visible>true</Visible>
       <Pack>false</Pack>
     </Content>
@@ -30,6 +33,7 @@
     <Content Include="$(MSBuildThisFileDirectory)..\..\runtimes\osx-x64\native\**\*" Condition=" '$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::OSX)))' ">
       <PackageCopyToOutput>true</PackageCopyToOutput>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
       <Visible>true</Visible>
       <Pack>false</Pack>
     </Content>
