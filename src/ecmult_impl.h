@@ -269,8 +269,11 @@ static void secp256k1_ecmult_odd_multiples_table_storage_var(const int n, secp25
 
 static const size_t SECP256K1_ECMULT_CONTEXT_PREALLOCATED_SIZE =
     ROUND_TO_ALIGN(sizeof((*((secp256k1_ecmult_context*) NULL)->pre_g)[0]) * ECMULT_TABLE_SIZE(WINDOW_G))
+#ifdef USE_ENDOMORPHISM
     + ROUND_TO_ALIGN(sizeof((*((secp256k1_ecmult_context*) NULL)->pre_g_128)[0]) * ECMULT_TABLE_SIZE(WINDOW_G))
+#endif
     ;
+
 
 static void secp256k1_ecmult_context_init(secp256k1_ecmult_context *ctx) {
     ctx->pre_g = NULL;

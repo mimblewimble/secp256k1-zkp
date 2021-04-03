@@ -109,7 +109,7 @@ static void secp256k1_ecmult_gen_context_finalize_memcpy(secp256k1_ecmult_gen_co
 #ifndef USE_ECMULT_STATIC_PRECOMPUTATION
     if (src->prec != NULL) {
         /* We cast to void* first to suppress a -Wcast-align warning. */
-        dst->prec = (secp256k1_ge_storage (*)[ECMULT_GEN_PREC_N][ECMULT_GEN_PREC_G])(void*)((unsigned char*)dst + ((unsigned char*)src->prec - (unsigned char*)src));
+        dst->prec = (secp256k1_ge_storage (*)[64][16])(void*)((unsigned char*)dst + ((unsigned char*)src->prec - (unsigned char*)src));
     }
 #else
     (void)dst, (void)src;
