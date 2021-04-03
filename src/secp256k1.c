@@ -84,6 +84,26 @@ static const secp256k1_context secp256k1_context_no_precomp_ = {
 };
 const secp256k1_context *secp256k1_context_no_precomp = &secp256k1_context_no_precomp_;
 
+size_t secp256k1_context_preallocated_size(unsigned int flags) {
+    size_t ret = ROUND_TO_ALIGN(sizeof(secp256k1_context));
+    /* A return value of 0 is reserved as an indicator for errors when we call this function internally. */
+    VERIFY_CHECK(ret != 0);
+
+    if (EXPECT((flags & SECP256K1_FLAGS_TYPE_MASK) != SECP256K1_FLAGS_TYPE_CONTEXT, 0)) {
+            secp256k1_callback_call(&default_illegal_callback,
+                                    "Invalid flags");
+            return 0;
+    }
+
+    if (flags & SECP256K1_FLAGS_BIT_CONTEXT_SIGN) {
+        ret += SECP256K1_ECMULT_GEN_CONTEXT_PREALLOCATED_SIZE;
+    }
+    if (flags & SECP256K1_FLAGS_BIT_CONTEXT_VERIFY) {
+        ret += SECP256K1_ECMULT_CONTEXT_PREALLOCATED_SIZE;
+    }
+    return ret;
+}
+
 secp256k1_context* secp256k1_context_create(unsigned int flags) {
     secp256k1_context* ret = (secp256k1_context*)checked_malloc(&default_error_callback, sizeof(secp256k1_context));
     ret->illegal_callback = default_illegal_callback;
