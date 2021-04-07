@@ -283,6 +283,7 @@ int secp256k1_bulletproof_rangeproof_prove(
         secp256k1_pubkey_save(t_one, &tge[0]);
         secp256k1_pubkey_save(t_two, &tge[1]);
     }
+    free(tge);
     secp256k1_scratch_deallocate_frame(scratch);
     return ret;
 }

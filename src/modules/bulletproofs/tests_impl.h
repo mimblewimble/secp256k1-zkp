@@ -626,6 +626,13 @@ void test_multi_party_bulletproof(size_t n_parties, secp256k1_scratch_space* scr
     blind_ptr[0] = blinds[0];
     CHECK(secp256k1_bulletproof_rangeproof_prove(ctx, scratch, gens, proof, &plen, tau_x_sum, &t_1_sum, &t_2_sum, value, NULL, blind_ptr, commit_ptr, 1, &secp256k1_generator_const_h, 64, common_nonce, nonces[0], NULL, 0, NULL) == 1);
     CHECK(secp256k1_bulletproof_rangeproof_verify(ctx, scratch, gens, proof, plen, NULL, commit, 1, 64, &secp256k1_generator_const_h, NULL, 0) == 1);
+
+    /* Cleanup */
+    for (j = 0; j < n_parties; j++) {
+        free(t_1s[j]);
+        free(t_2s[j]);
+        free(partial_commits[j]);
+    }
 }
 
 void run_bulletproofs_tests(void) {
