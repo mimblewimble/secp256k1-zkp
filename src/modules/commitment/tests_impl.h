@@ -333,6 +333,8 @@ void test_switch(void) {
     CHECK(memcmp(blind_switch, blind, 32) != 0);
     CHECK(secp256k1_blind_switch(local_ctx, blind_switch_2, blind, val, &GENERATOR_H, &GENERATOR_G, &GENERATOR_J_PUB));
     CHECK(memcmp(blind_switch_2, blind_switch, 32) == 0);
+
+    secp256k1_context_destroy(local_ctx);
 }
 
 void run_commitment_tests(void) {
