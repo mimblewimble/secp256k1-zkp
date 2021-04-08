@@ -179,6 +179,11 @@ AC_ARG_ENABLE(module_surjectionproof,
     [enable_module_surjectionproof=$enableval],
     [enable_module_surjectionproof=no])
 
+AC_ARG_ENABLE(asan,
+    AS_HELP_STRING([--enable-asan],[enable ASAN sanitizer (default is no)]),
+    [enable_asan=$enableval],
+    [enable_asan=no])
+
 AC_ARG_WITH([field], [AS_HELP_STRING([--with-field=64bit|32bit|auto],
 [Specify Field Implementation. Default is auto])],[req_field=$withval], [req_field=auto])
 
@@ -370,6 +375,10 @@ else
   esac
 fi
 
+if test x"$enable_asan" = x"yes"; then
+  CFLAGS="$CFLAGS -fsanitize=address"
+fi
+
 # select assembly optimization
 use_external_asm=no
 
@@ -549,6 +558,7 @@ AC_MSG_NOTICE([Building for coverage analysis: $enable_coverage])
 AC_MSG_NOTICE([Building ECDH module: $enable_module_ecdh])
 AC_MSG_NOTICE([Building ECDSA pubkey recovery module: $enable_module_recovery])
 AC_MSG_NOTICE([Using jni: $use_jni])
+AC_MSG_NOTICE([Using ASAN: $enable_asan])
 
 if test x"$enable_experimental" = x"yes"; then
   AC_MSG_NOTICE([******])
@@ -649,6 +659,7 @@ AM_CONDITIONAL([USE_JNI], [test x"$use_jni" == x"yes"])
 AM_CONDITIONAL([USE_EXTERNAL_ASM], [test x"$use_external_asm" = x"yes"])
 AM_CONDITIONAL([USE_ASM_ARM], [test x"$set_asm" = x"arm"])
 AM_CONDITIONAL([ENABLE_MODULE_SURJECTIONPROOF], [test x"$enable_module_surjectionproof" = x"yes"])
+AM_CONDITIONAL([USE_ASAN], [test x"$enable_asan" == x"yes"])
 
 dnl make sure nothing new is exported so that we don't break the cache
 PKGCONFIG_PATH_TEMP="$PKG_CONFIG_PATH"
