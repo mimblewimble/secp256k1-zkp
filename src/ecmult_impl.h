@@ -10,6 +10,7 @@
 #include <string.h>
 #include <stdint.h>
 
+#include "util.h"
 #include "group.h"
 #include "scalar.h"
 #include "ecmult.h"
@@ -137,25 +138,109 @@ static void secp256k1_ecmult_odd_multiples_table_globalz_windowa(secp256k1_ge *p
     secp256k1_ge_globalz_set_table_gej(ECMULT_TABLE_SIZE(WINDOW_A), pre, globalz, prej, zr);
 }
 
-static void secp256k1_ecmult_odd_multiples_table_storage_var(int n, secp256k1_ge_storage *pre, const secp256k1_gej *a, const secp256k1_callback *cb) {
-    secp256k1_gej *prej = (secp256k1_gej*)checked_malloc(cb, sizeof(secp256k1_gej) * n);
-    secp256k1_ge *prea = (secp256k1_ge*)checked_malloc(cb, sizeof(secp256k1_ge) * n);
-    secp256k1_fe *zr = (secp256k1_fe*)checked_malloc(cb, sizeof(secp256k1_fe) * n);
+static void secp256k1_ecmult_odd_multiples_table_storage_var(const int n, secp256k1_ge_storage *pre, const secp256k1_gej *a) {
+    secp256k1_gej d;
+    secp256k1_ge a_ge, d_ge, p_ge;
+    secp256k1_ge last_ge;
+    secp256k1_gej pj;
+    secp256k1_fe zi;
+    secp256k1_fe zr;
+    secp256k1_fe dx_over_dz_squared;
     int i;
 
-    /* Compute the odd multiples in Jacobian form. */
-    secp256k1_ecmult_odd_multiples_table(n, prej, zr, a);
-    /* Convert them in batch to affine coordinates. */
-    secp256k1_ge_set_table_gej_var(prea, prej, zr, n);
-    /* Convert them to compact storage form. */
-    for (i = 0; i < n; i++) {
-        secp256k1_ge_to_storage(&pre[i], &prea[i]);
+    VERIFY_CHECK(!a->infinity);
+
+    secp256k1_gej_double_var(&d, a, NULL);
+
+    /* First, we perform all the additions in an isomorphic curve obtained by multiplying
+     * all `z` coordinates by 1/`d.z`. In these coordinates `d` is affine so we can use
+     * `secp256k1_gej_add_ge_var` to perform the additions. For each addition, we store
+     * the resulting y-coordinate and the z-ratio, since we only have enough memory to
+     * store two field elements. These are sufficient to efficiently undo the isomorphism
+     * and recompute all the `x`s.
+     */
+    d_ge.x = d.x;
+    d_ge.y = d.y;
+    d_ge.infinity = 0;
+
+    secp256k1_ge_set_gej_zinv(&a_ge, a, &d.z);
+    pj.x = a_ge.x;
+    pj.y = a_ge.y;
+    pj.z = a->z;
+    pj.infinity = 0;
+
+    zr = d.z;
+    secp256k1_fe_normalize_var(&zr);
+    secp256k1_fe_to_storage(&pre[0].x, &zr);
+    secp256k1_fe_normalize_var(&pj.y);
+    secp256k1_fe_to_storage(&pre[0].y, &pj.y);
+
+    for (i = 1; i < n; i++) {
+        secp256k1_gej_add_ge_var(&pj, &pj, &d_ge, &zr);
+        secp256k1_fe_normalize_var(&zr);
+        secp256k1_fe_to_storage(&pre[i].x, &zr);
+        secp256k1_fe_normalize_var(&pj.y);
+        secp256k1_fe_to_storage(&pre[i].y, &pj.y);
     }
 
-    free(prea);
-    free(prej);
-    free(zr);
+    /* Map `pj` back to our curve by multiplying its z-coordinate by `d.z`. */
+    secp256k1_fe_mul(&pj.z, &pj.z, &d.z);
+    /* Directly set `pre[n - 1]` to `pj`, saving the inverted z-coordinate so
+     * that we can combine it with the saved z-ratios to compute the other zs
+     * without any more inversions. */
+    secp256k1_fe_inv_var(&zi, &pj.z);
+    secp256k1_ge_set_gej_zinv(&p_ge, &pj, &zi);
+    secp256k1_ge_from_storage(&last_ge, &pre[n - 1]);
+    secp256k1_ge_to_storage(&pre[n - 1], &p_ge);
+
+    /* Compute the actual x-coordinate of D, which will be needed below. */
+    secp256k1_fe_inv_var(&d.z, &d.z);
+    secp256k1_fe_sqr(&dx_over_dz_squared, &d.z);
+    secp256k1_fe_mul(&dx_over_dz_squared, &dx_over_dz_squared, &d.x);
+
+    i = n - 1;
+    while (i > 0) {
+        secp256k1_fe zi2, zi3;
+        i--;
+        /* For the remaining points, we extract the z-ratio from the stored
+         * x-coordinate, compute its z^-1 from that, and compute the full
+         * point from that. The z-ratio for the next iteration is stored in
+         * the x-coordinate at the end of the loop. */
+        secp256k1_fe_mul(&zi, &zi, &last_ge.x);
+        secp256k1_fe_sqr(&zi2, &zi);
+        secp256k1_fe_mul(&zi3, &zi2, &zi);
+        /* To compute the actual x-coordinate, we use the stored z ratio and
+         * y-coordinate, which we obtained from `secp256k1_gej_add_ge_var`
+         * in the loop above, as well as the inverse of the square of its
+         * z-coordinate. We store the latter in the `zi2` variable, which is
+         * computed iteratively starting from the overall Z inverse then
+         * multiplying by each z-ratio in turn.
+         *
+         * Denoting the z-ratio as `rzr` (though the actual variable binding
+         * is `last_ge.x`), we observe that it equal to `h` from the inside
+         * of the above `gej_add_ge_var` call. This satisfies
+         *
+         *    rzr = d_x * z^2 - x
+         *
+         * where `d_x` is the x coordinate of `D` and `(x, z)` are Jacobian
+         * coordinates of our desired point.
+         *
+         * Rearranging and dividing by `z^2` to convert to affine, we get
+         *
+         *     x = d_x - rzr / z^2
+         *       = d_x - rzr * zi2
+         */
+        secp256k1_fe_mul(&p_ge.x, &last_ge.x, &zi2);
+        secp256k1_fe_negate(&p_ge.x, &p_ge.x, 1);
+        secp256k1_fe_add(&p_ge.x, &dx_over_dz_squared);
+        /* y is stored_y/z^3, as we expect */
+        secp256k1_ge_from_storage(&last_ge, &pre[i]);
+        secp256k1_fe_mul(&p_ge.y, &last_ge.y, &zi3);
+        /* Store */
+        secp256k1_ge_to_storage(&pre[i], &p_ge);
+    }
 }
+
 
 /** The following two macro retrieves a particular odd multiple from a table
  *  of precomputed multiples. */
@@ -182,6 +267,14 @@ static void secp256k1_ecmult_odd_multiples_table_storage_var(int n, secp256k1_ge
     } \
 } while(0)
 
+static const size_t SECP256K1_ECMULT_CONTEXT_PREALLOCATED_SIZE =
+    ROUND_TO_ALIGN(sizeof((*((secp256k1_ecmult_context*) NULL)->pre_g)[0]) * ECMULT_TABLE_SIZE(WINDOW_G))
+#ifdef USE_ENDOMORPHISM
+    + ROUND_TO_ALIGN(sizeof((*((secp256k1_ecmult_context*) NULL)->pre_g_128)[0]) * ECMULT_TABLE_SIZE(WINDOW_G))
+#endif
+    ;
+
+
 static void secp256k1_ecmult_context_init(secp256k1_ecmult_context *ctx) {
     ctx->pre_g = NULL;
 #ifdef USE_ENDOMORPHISM
@@ -189,8 +282,10 @@ static void secp256k1_ecmult_context_init(secp256k1_ecmult_context *ctx) {
 #endif
 }
 
-static void secp256k1_ecmult_context_build(secp256k1_ecmult_context *ctx, const secp256k1_callback *cb) {
+static void secp256k1_ecmult_context_build(secp256k1_ecmult_context *ctx, void **prealloc) {
     secp256k1_gej gj;
+    void* const base = *prealloc;
+    size_t const prealloc_size = SECP256K1_ECMULT_CONTEXT_PREALLOCATED_SIZE;
 
     if (ctx->pre_g != NULL) {
         return;
@@ -199,57 +294,46 @@ static void secp256k1_ecmult_context_build(secp256k1_ecmult_context *ctx, const 
     /* get the generator */
     secp256k1_gej_set_ge(&gj, &secp256k1_ge_const_g);
 
-    ctx->pre_g = (secp256k1_ge_storage (*)[])checked_malloc(cb, sizeof((*ctx->pre_g)[0]) * ECMULT_TABLE_SIZE(WINDOW_G));
+    ctx->pre_g = (secp256k1_ge_storage (*)[])manual_alloc(prealloc, sizeof((*ctx->pre_g)[0]) * ECMULT_TABLE_SIZE(WINDOW_G), base, prealloc_size);
 
     /* precompute the tables with odd multiples */
-    secp256k1_ecmult_odd_multiples_table_storage_var(ECMULT_TABLE_SIZE(WINDOW_G), *ctx->pre_g, &gj, cb);
+    secp256k1_ecmult_odd_multiples_table_storage_var(ECMULT_TABLE_SIZE(WINDOW_G), *ctx->pre_g, &gj);
 
 #ifdef USE_ENDOMORPHISM
     {
         secp256k1_gej g_128j;
         int i;
 
-        ctx->pre_g_128 = (secp256k1_ge_storage (*)[])checked_malloc(cb, sizeof((*ctx->pre_g_128)[0]) * ECMULT_TABLE_SIZE(WINDOW_G));
+        ctx->pre_g_128 = (secp256k1_ge_storage (*)[])manual_alloc(prealloc, sizeof((*ctx->pre_g_128)[0]) * ECMULT_TABLE_SIZE(WINDOW_G), base, prealloc_size);
 
         /* calculate 2^128*generator */
         g_128j = gj;
         for (i = 0; i < 128; i++) {
             secp256k1_gej_double_var(&g_128j, &g_128j, NULL);
         }
-        secp256k1_ecmult_odd_multiples_table_storage_var(ECMULT_TABLE_SIZE(WINDOW_G), *ctx->pre_g_128, &g_128j, cb);
+        secp256k1_ecmult_odd_multiples_table_storage_var(ECMULT_TABLE_SIZE(WINDOW_G), *ctx->pre_g_128, &g_128j);
     }
 #endif
 }
 
-static void secp256k1_ecmult_context_clone(secp256k1_ecmult_context *dst,
-                                           const secp256k1_ecmult_context *src, const secp256k1_callback *cb) {
-    if (src->pre_g == NULL) {
-        dst->pre_g = NULL;
-    } else {
-        size_t size = sizeof((*dst->pre_g)[0]) * ECMULT_TABLE_SIZE(WINDOW_G);
-        dst->pre_g = (secp256k1_ge_storage (*)[])checked_malloc(cb, size);
-        memcpy(dst->pre_g, src->pre_g, size);
+static void secp256k1_ecmult_context_finalize_memcpy(secp256k1_ecmult_context *dst, const secp256k1_ecmult_context *src) {
+    if (src->pre_g != NULL) {
+        /* We cast to void* first to suppress a -Wcast-align warning. */
+        dst->pre_g = (secp256k1_ge_storage (*)[])(void*)((unsigned char*)dst + ((unsigned char*)(src->pre_g) - (unsigned char*)src));
     }
 #ifdef USE_ENDOMORPHISM
-    if (src->pre_g_128 == NULL) {
-        dst->pre_g_128 = NULL;
-    } else {
-        size_t size = sizeof((*dst->pre_g_128)[0]) * ECMULT_TABLE_SIZE(WINDOW_G);
-        dst->pre_g_128 = (secp256k1_ge_storage (*)[])checked_malloc(cb, size);
-        memcpy(dst->pre_g_128, src->pre_g_128, size);
+    if (src->pre_g_128 != NULL) {
+        dst->pre_g_128 = (secp256k1_ge_storage (*)[])(void*)((unsigned char*)dst + ((unsigned char*)(src->pre_g_128) - (unsigned char*)src));
     }
 #endif
 }
+
 
 static int secp256k1_ecmult_context_is_built(const secp256k1_ecmult_context *ctx) {
     return ctx->pre_g != NULL;
 }
 
 static void secp256k1_ecmult_context_clear(secp256k1_ecmult_context *ctx) {
-    free(ctx->pre_g);
-#ifdef USE_ENDOMORPHISM
-    free(ctx->pre_g_128);
-#endif
     secp256k1_ecmult_context_init(ctx);
 }
 
