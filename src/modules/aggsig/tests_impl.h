@@ -20,6 +20,10 @@ void test_aggsig_api(void) {
     unsigned char seckeys[5][32];
     secp256k1_pubkey pubkeys[5];
     secp256k1_aggsig_partial_signature partials[5];
+    unsigned char sub_result[64];
+    unsigned char sub_result_alt[64];
+    int sub_return_val;
+    int sub_check;
     secp256k1_aggsig_context *aggctx;
     unsigned char seed[32] = { 1, 2, 3, 4, 0 };
     unsigned char sig[64];
@@ -134,6 +138,7 @@ void test_aggsig_api(void) {
     CHECK(!secp256k1_aggsig_verify(vrfy, scratch, sig, msg, pubkeys, 0));
     CHECK(secp256k1_aggsig_verify(vrfy, scratch, sig, msg, pubkeys, 5));
     CHECK(ecount == 15);
+
     CHECK(!secp256k1_aggsig_verify(none, scratch, sig, msg, pubkeys, 5));
     CHECK(ecount == 16);
 
@@ -264,7 +269,55 @@ void test_aggsig_api(void) {
         msg[2]=3;
         CHECK(!secp256k1_aggsig_verify_single(vrfy, combined_sig, msg, NULL, &combiner_sum_2, NULL, NULL, 0));
         CHECK(!secp256k1_aggsig_verify_single(vrfy, combined_sig, msg, NULL, &combiner_sum_2, &combiner_sum_2, NULL, 0));
-    }
+
+        /* Test subtracting partial sig from the completed sig (as used in early payment proofs)*/
+        sub_return_val = secp256k1_aggsig_subtract_partial_signature(none, sub_result, sub_result_alt, combined_sig, sigs[0]);
+        CHECK(sub_return_val);
+
+        if (sub_return_val == 1) {
+            for (j = 0; j < 64; j++){
+                CHECK(sub_result[j] == sigs[1][j]);
+                printf("%0x,", sub_result[j]);
+            }
+            printf("\n");
+            for (j = 0; j < 64; j++){
+                printf("%0x,", sigs[1][j]);
+            }
+            printf("\n\n");
+        }
+
+        if (sub_return_val == 2) {
+            sub_check = 1;
+            printf("First possible sig: \n");
+            for (j = 0; j < 64; j++){
+                if (sub_result[j] != sigs[1][j]) {
+                    sub_check = 0;
+                }
+                printf("%0x,", sub_result[j]);
+            }
+            printf("\n");
+            for (j = 0; j < 64; j++){
+                printf("%0x,", sigs[1][j]);
+            }
+            printf("\n\n");
+            if (!sub_check) {
+                sub_check = 1;
+                printf("Second possible sig: \n");
+                for (j = 0; j < 64; j++){
+                    if (sub_result_alt[j] != sigs[1][j]) {
+                        sub_check = 0;
+                    }
+                    printf("%0x,", sub_result_alt[j]);
+                }
+                printf("\n");
+                for (j = 0; j < 64; j++){
+                    printf("%0x,", sigs[1][j]);
+                }
+                printf("\n\n");
+            }
+            CHECK(sub_check);
+        }
+     }
     /*** End aggsig for Grin exchange test ***/
 
     /* cleanup */

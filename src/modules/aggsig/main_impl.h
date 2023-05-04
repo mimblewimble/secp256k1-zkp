@@ -346,6 +346,124 @@ int secp256k1_aggsig_partial_sign(const secp256k1_context* ctx, secp256k1_aggsig
     return 1;
 }
 
+int secp256k1_aggsig_subtract_partial_signature(
+    const secp256k1_context* ctx,
+    unsigned char* result,
+    unsigned char* result_alt,
+    const unsigned char *sig64,
+    const unsigned char *partial64
+) {
+    secp256k1_scalar tmp, tmp2;
+    secp256k1_fe noncesum_fe;
+    secp256k1_ge noncesum_ge;
+    secp256k1_gej noncesum_gej;
+    secp256k1_ge noncesum_ge_neg;
+    secp256k1_gej noncesum_gej_neg;
+    secp256k1_fe noncepartial_fe;
+    secp256k1_ge noncepartial_ge;
+    secp256k1_ge noncepartial_ge_neg;
+    secp256k1_gej nonceresult_gej;
+    secp256k1_gej nonceresult_gej_neg;
+    secp256k1_ge final;
+    int overflow;
+    int neg_version_has_quad = 0;
+    int pos_version_has_quad = 0;
+
+    VERIFY_CHECK(ctx != NULL);
+    ARG_CHECK(result != NULL);
+    ARG_CHECK(sig64 != NULL);
+    ARG_CHECK(partial64 != NULL);
+    (void) ctx;
+
+    /* Scalar portion */
+    secp256k1_scalar_set_b32(&tmp, sig64 + 32, &overflow);
+    if (overflow) {
+        secp256k1_scalar_clear(&tmp);
+        return 0;
+    }
+    secp256k1_scalar_set_b32(&tmp2, partial64 + 32, &overflow);
+    if (overflow) {
+        secp256k1_scalar_clear(&tmp);
+        secp256k1_scalar_clear(&tmp2);
+        return 0;
+    }
+    secp256k1_scalar_negate(&tmp2, &tmp2);
+    secp256k1_scalar_add(&tmp, &tmp, &tmp2);
+
+    secp256k1_scalar_get_b32(result + 32, &tmp);
+    secp256k1_scalar_get_b32(result_alt + 32, &tmp);
+    secp256k1_scalar_clear(&tmp);
+    secp256k1_scalar_clear(&tmp2);
+
+    /* nonce portion 
+     * Note that we are unable to determine with 100% certainty
+     * what nonce was originally chosen due to only the x coordinate
+     * being stored. We can sometimes determing which was correct, but
+     * may have to return a second possibility.
+     */
+
+    /* Parse nonce sum total and negated version (R, -R) */
+    if (!secp256k1_fe_set_b32(&noncesum_fe, sig64)) {
+        return 0;
+    }
+    secp256k1_ge_set_xquad(&noncesum_ge, &noncesum_fe);
+    secp256k1_gej_set_ge(&noncesum_gej, &noncesum_ge);
+    secp256k1_ge_neg(&noncesum_ge_neg, &noncesum_ge);
+    secp256k1_gej_set_ge(&noncesum_gej_neg, &noncesum_ge_neg);
+
+    /* Parse provided partial-sig nonce and negate */
+    if (!secp256k1_fe_set_b32(&noncepartial_fe, partial64)) {
+        return 0;
+    }
+    secp256k1_ge_set_xquad(&noncepartial_ge, &noncepartial_fe);
+    secp256k1_ge_neg(&noncepartial_ge_neg, &noncepartial_ge);
+
+    /* Try positive (Rr = R-Rs) */
+    secp256k1_gej_add_ge(&nonceresult_gej, &noncesum_gej, &noncepartial_ge_neg);
+
+    /* Now try neg (Rr = -R-Rs) */
+    secp256k1_gej_add_ge(&nonceresult_gej_neg, &noncesum_gej_neg, &noncepartial_ge_neg);
+    
+    printf("Result\n");
+    if (secp256k1_gej_has_quad_y_var(&nonceresult_gej)) {
+        printf("Positive has quad y var\n");
+        pos_version_has_quad = 1;
+    }
+    if (secp256k1_gej_has_quad_y_var(&nonceresult_gej_neg)) {
+        printf("Negative has quad y var\n");
+        neg_version_has_quad = 1;
+    }
+    if (pos_version_has_quad && !neg_version_has_quad) {
+        printf("Pos only\n");
+        secp256k1_ge_set_gej(&final, &nonceresult_gej);
+        secp256k1_fe_normalize_var(&final.x);
+        secp256k1_fe_get_b32(result, &final.x);
+        printf("End Result\n");
+        return 1;
+    } else if (!pos_version_has_quad && neg_version_has_quad) {
+        printf("Neg only\n");
+        secp256k1_ge_set_gej(&final, &nonceresult_gej_neg);
+        secp256k1_fe_normalize_var(&final.x);
+        secp256k1_fe_get_b32(result, &final.x);
+        printf("End Result\n");
+        return 1;
+    } else {
+        printf("Both have quad y\n");
+        /* if both, now what? */
+        secp256k1_ge_set_gej(&final, &nonceresult_gej);
+        secp256k1_fe_normalize_var(&final.x);
+        secp256k1_fe_get_b32(result, &final.x);
+
+        secp256k1_ge_set_gej(&final, &nonceresult_gej_neg);
+        secp256k1_fe_normalize_var(&final.x);
+        secp256k1_fe_get_b32(result_alt, &final.x);
+        printf("End Result\n");
+        return 2;
+    } 
+
+    return 0;
+}
+
 int secp256k1_aggsig_combine_signatures(const secp256k1_context* ctx, secp256k1_aggsig_context* aggctx, unsigned char *sig64, const secp256k1_aggsig_partial_signature *partial, size_t n_sigs) {
     size_t i;
     secp256k1_scalar s;
