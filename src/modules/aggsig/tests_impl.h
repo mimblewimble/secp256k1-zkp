@@ -274,46 +274,28 @@ void test_aggsig_api(void) {
         sub_return_val = secp256k1_aggsig_subtract_partial_signature(none, sub_result, sub_result_alt, combined_sig, sigs[0]);
         CHECK(sub_return_val);
 
+        /* If there's only one possible result, it should be the only one that needs to be tested */
         if (sub_return_val == 1) {
             for (j = 0; j < 64; j++){
                 CHECK(sub_result[j] == sigs[1][j]);
-                printf("%0x,", sub_result[j]);
             }
-            printf("\n");
-            for (j = 0; j < 64; j++){
-                printf("%0x,", sigs[1][j]);
-            }
-            printf("\n\n");
         }
 
+        /* if there are two possible results, both potentially need to be checked */
         if (sub_return_val == 2) {
             sub_check = 1;
-            printf("First possible sig: \n");
             for (j = 0; j < 64; j++){
                 if (sub_result[j] != sigs[1][j]) {
                     sub_check = 0;
                 }
-                printf("%0x,", sub_result[j]);
             }
-            printf("\n");
-            for (j = 0; j < 64; j++){
-                printf("%0x,", sigs[1][j]);
-            }
-            printf("\n\n");
             if (!sub_check) {
                 sub_check = 1;
-                printf("Second possible sig: \n");
                 for (j = 0; j < 64; j++){
                     if (sub_result_alt[j] != sigs[1][j]) {
                         sub_check = 0;
                     }
-                    printf("%0x,", sub_result_alt[j]);
                 }
-                printf("\n");
-                for (j = 0; j < 64; j++){
-                    printf("%0x,", sigs[1][j]);
-                }
-                printf("\n\n");
             }
             CHECK(sub_check);
         }

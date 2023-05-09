@@ -371,6 +371,7 @@ int secp256k1_aggsig_subtract_partial_signature(
 
     VERIFY_CHECK(ctx != NULL);
     ARG_CHECK(result != NULL);
+    ARG_CHECK(result_alt != NULL);
     ARG_CHECK(sig64 != NULL);
     ARG_CHECK(partial64 != NULL);
     (void) ctx;
@@ -398,7 +399,7 @@ int secp256k1_aggsig_subtract_partial_signature(
     /* nonce portion 
      * Note that we are unable to determine with 100% certainty
      * what nonce was originally chosen due to only the x coordinate
-     * being stored. We can sometimes determing which was correct, but
+     * being stored. We can sometimes determine which was correct, but
      * may have to return a second possibility.
      */
 
@@ -424,32 +425,24 @@ int secp256k1_aggsig_subtract_partial_signature(
     /* Now try neg (Rr = -R-Rs) */
     secp256k1_gej_add_ge(&nonceresult_gej_neg, &noncesum_gej_neg, &noncepartial_ge_neg);
     
-    printf("Result\n");
     if (secp256k1_gej_has_quad_y_var(&nonceresult_gej)) {
-        printf("Positive has quad y var\n");
         pos_version_has_quad = 1;
     }
     if (secp256k1_gej_has_quad_y_var(&nonceresult_gej_neg)) {
-        printf("Negative has quad y var\n");
         neg_version_has_quad = 1;
     }
     if (pos_version_has_quad && !neg_version_has_quad) {
-        printf("Pos only\n");
         secp256k1_ge_set_gej(&final, &nonceresult_gej);
         secp256k1_fe_normalize_var(&final.x);
         secp256k1_fe_get_b32(result, &final.x);
-        printf("End Result\n");
         return 1;
     } else if (!pos_version_has_quad && neg_version_has_quad) {
-        printf("Neg only\n");
         secp256k1_ge_set_gej(&final, &nonceresult_gej_neg);
         secp256k1_fe_normalize_var(&final.x);
         secp256k1_fe_get_b32(result, &final.x);
-        printf("End Result\n");
         return 1;
     } else {
-        printf("Both have quad y\n");
-        /* if both, now what? */
+        /* if both, we need to return both possibilities */
         secp256k1_ge_set_gej(&final, &nonceresult_gej);
         secp256k1_fe_normalize_var(&final.x);
         secp256k1_fe_get_b32(result, &final.x);
@@ -457,7 +450,6 @@ int secp256k1_aggsig_subtract_partial_signature(
         secp256k1_ge_set_gej(&final, &nonceresult_gej_neg);
         secp256k1_fe_normalize_var(&final.x);
         secp256k1_fe_get_b32(result_alt, &final.x);
-        printf("End Result\n");
         return 2;
     } 
 
