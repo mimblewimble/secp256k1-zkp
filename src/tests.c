@@ -5279,11 +5279,111 @@ int main(int argc, char **argv) {
         CHECK(secp256k1_context_randomize(ctx, secp256k1_rand_bits(1) ? run32 : NULL));
     }
 
+    run_rand_bits();
+    run_rand_int();
+    run_util_tests();
+
+    run_sha256_tests();
+    run_hmac_sha256_tests();
+    run_rfc6979_hmac_sha256_tests();
+
+#ifndef USE_NUM_NONE
+    /* num tests */
+    run_num_smalltests();
+#endif
+
+    /* scalar tests */
+    run_scalar_tests();
+
+    /* field tests */
+    run_field_inv();
+    run_field_inv_var();
+    run_field_inv_all_var();
+    run_field_misc();
+    run_field_convert();
+    run_sqr();
+    run_sqrt();
+
+    /* group tests */
+    run_ge();
+    run_group_decompress();
+
+    /* ecmult tests */
+    run_wnaf();
+    run_point_times_order();
+    run_ecmult_chain();
+    run_ecmult_constants();
+    run_ecmult_gen_blind();
+    run_ecmult_const_tests();
+    run_ecmult_multi_tests();
+    run_ec_combine();
+
+    /* endomorphism tests */
+#ifdef USE_ENDOMORPHISM
+    run_endomorphism_tests();
+#endif
+
+    /* EC point parser test */
+    run_ec_pubkey_parse_test();
+
+    /* EC key edge cases */
+    run_eckey_edge_case_test();
+
+#ifdef ENABLE_MODULE_ECDH
+    /* ecdh tests */
+    run_ecdh_tests();
+#endif
+
+#ifdef ENABLE_MODULE_SCHNORRSIG
+    /* Schnorrsig tests */
+    run_schnorrsig_tests();
+#endif
+
+    /* ecdsa tests */
+    run_random_pubkeys();
+    run_ecdsa_der_parse();
+    run_ecdsa_sign_verify();
+    run_ecdsa_end_to_end();
+    run_ecdsa_edge_cases();
+#ifdef ENABLE_OPENSSL_TESTS
+    run_ecdsa_openssl();
+#endif
+
+#ifdef ENABLE_MODULE_RECOVERY
+    /* ECDSA pubkey recovery tests */
+    run_recovery_tests();
+#endif
+
+#ifdef ENABLE_MODULE_GENERATOR
+    run_generator_tests();
+#endif
+
+#ifdef ENABLE_MODULE_RANGEPROOF
+    run_rangeproof_tests();
+#endif
+
+#ifdef ENABLE_MODULE_BULLETPROOF
+    run_bulletproofs_tests();
+#endif
+
+#ifdef ENABLE_MODULE_COMMITMENT
+    run_commitment_tests();
+#endif
+
 #ifdef ENABLE_MODULE_AGGSIG
     run_aggsig_tests();
 #endif
 
-   secp256k1_rand256(run32);
+#ifdef ENABLE_MODULE_WHITELIST
+    /* Key whitelisting tests */
+    run_whitelist_tests();
+#endif
+
+#ifdef ENABLE_MODULE_SURJECTIONPROOF
+    run_surjection_tests();
+#endif
+
+    secp256k1_rand256(run32);
     printf("random run = %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x\n", run32[0], run32[1], run32[2], run32[3], run32[4], run32[5], run32[6], run32[7], run32[8], run32[9], run32[10], run32[11], run32[12], run32[13], run32[14], run32[15]);
 
     /* shutdown */
