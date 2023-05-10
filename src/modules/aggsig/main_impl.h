@@ -425,12 +425,9 @@ int secp256k1_aggsig_subtract_partial_signature(
     /* Now try neg (Rr = -R-Rs) */
     secp256k1_gej_add_ge(&nonceresult_gej_neg, &noncesum_gej_neg, &noncepartial_ge_neg);
     
-    if (secp256k1_gej_has_quad_y_var(&nonceresult_gej)) {
-        pos_version_has_quad = 1;
-    }
-    if (secp256k1_gej_has_quad_y_var(&nonceresult_gej_neg)) {
-        neg_version_has_quad = 1;
-    }
+    pos_version_has_quad = secp256k1_gej_has_quad_y_var(&nonceresult_gej);
+    neg_version_has_quad = secp256k1_gej_has_quad_y_var(&nonceresult_gej_neg);
+
     if (pos_version_has_quad && !neg_version_has_quad) {
         secp256k1_ge_set_gej(&final, &nonceresult_gej);
         secp256k1_fe_normalize_var(&final.x);
@@ -452,8 +449,6 @@ int secp256k1_aggsig_subtract_partial_signature(
         secp256k1_fe_get_b32(result_alt, &final.x);
         return 2;
     } 
-
-    return 0;
 }
 
 int secp256k1_aggsig_combine_signatures(const secp256k1_context* ctx, secp256k1_aggsig_context* aggctx, unsigned char *sig64, const secp256k1_aggsig_partial_signature *partial, size_t n_sigs) {
