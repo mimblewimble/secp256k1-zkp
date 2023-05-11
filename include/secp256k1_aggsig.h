@@ -145,8 +145,11 @@ SECP256K1_API int secp256k1_aggsig_partial_sign(
 
 /** Subtract a partial signature from a completed signature, resulting in another partial signature
  *
- *  Returns: 0 on failure, 1 if there is only one possible result, 2 if there is a second possiblity due
- *           to two possiblities for the chosen y value of the original public nonce
+ *  Returns: 0 on failure due to an argument or unexpected calculation error
+             -1 if the provided signatures result in no possible nonce with 
+                a y value that is a quadratic residue
+             1 if there is only one possible result
+             2 if there is a second possiblity for the chosen y value of the original public nonce
  *  Args:    ctx: an existing context object, initialized for verifying (cannot be NULL)
  *  Out:     result: the (partial) signature resulting from subtracting partial from sig64
  *           result_alt: alternative possible signature resulting from subtracting partial from sig64

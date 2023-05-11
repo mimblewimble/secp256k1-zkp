@@ -376,7 +376,7 @@ int secp256k1_aggsig_subtract_partial_signature(
     ARG_CHECK(partial64 != NULL);
     (void) ctx;
 
-    /* Scalar portion */
+    /* Scalar portion, straightforward scalar subtraction */
     secp256k1_scalar_set_b32(&tmp, sig64 + 32, &overflow);
     if (overflow) {
         secp256k1_scalar_clear(&tmp);
@@ -407,8 +407,12 @@ int secp256k1_aggsig_subtract_partial_signature(
     if (!secp256k1_fe_set_b32(&noncesum_fe, sig64)) {
         return 0;
     }
+
+    /* initialize nonce sum with y value that is a quadratic residue */
     secp256k1_ge_set_xquad(&noncesum_ge, &noncesum_fe);
     secp256k1_gej_set_ge(&noncesum_gej, &noncesum_ge);
+
+    /* also initialize negated version -R */
     secp256k1_ge_neg(&noncesum_ge_neg, &noncesum_ge);
     secp256k1_gej_set_ge(&noncesum_gej_neg, &noncesum_ge_neg);
 
@@ -416,6 +420,9 @@ int secp256k1_aggsig_subtract_partial_signature(
     if (!secp256k1_fe_set_b32(&noncepartial_fe, partial64)) {
         return 0;
     }
+
+    /* Initialize negated version of partial sum, which we're going
+    to subtract from the nonce total */
     secp256k1_ge_set_xquad(&noncepartial_ge, &noncepartial_fe);
     secp256k1_ge_neg(&noncepartial_ge_neg, &noncepartial_ge);
 
@@ -428,6 +435,9 @@ int secp256k1_aggsig_subtract_partial_signature(
     pos_version_has_quad = secp256k1_gej_has_quad_y_var(&nonceresult_gej);
     neg_version_has_quad = secp256k1_gej_has_quad_y_var(&nonceresult_gej_neg);
 
+    /* If ONLY the positive 'version' of Rr (=R-Rs) or only the
+       negative version of Rr (=-R-Rs) results in a QR, then we know
+       for certain what the original x value was */
     if (pos_version_has_quad && !neg_version_has_quad) {
         secp256k1_ge_set_gej(&final, &nonceresult_gej);
         secp256k1_fe_normalize_var(&final.x);
@@ -438,8 +448,10 @@ int secp256k1_aggsig_subtract_partial_signature(
         secp256k1_fe_normalize_var(&final.x);
         secp256k1_fe_get_b32(result, &final.x);
         return 1;
-    } else {
-        /* if both, we need to return both possibilities */
+    } else if (pos_version_has_quad && neg_version_has_quad) {
+        /* if both versions result in a QR, it could have been either,
+        so we need to return both possibilities and indicate the user 
+        needs to potentially check a second value */
         secp256k1_ge_set_gej(&final, &nonceresult_gej);
         secp256k1_fe_normalize_var(&final.x);
         secp256k1_fe_get_b32(result, &final.x);
@@ -448,6 +460,13 @@ int secp256k1_aggsig_subtract_partial_signature(
         secp256k1_fe_normalize_var(&final.x);
         secp256k1_fe_get_b32(result_alt, &final.x);
         return 2;
+    } else {
+        /* if neither result in a QR, then the signature is invalid according
+        to our construction. Note this should never happen with signatures constructed
+        via this particular API, and there's a chance that signatures using a different
+        convention for selecting y coordinates could still return a valid but 'incorrect' 
+        value. */
+        return -1;
     } 
 }
 

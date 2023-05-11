@@ -43,6 +43,20 @@ void test_aggsig_api(void) {
     size_t i;
     size_t j;
 
+    const unsigned char no_qr_const_1[] = {
+        0xCA,0x69,0xE3,0x16,0xC1,0xF5,0x4E,0xFE,
+        0x6C,0x23,0xFF,0x8F,0x1D,0x29,0xB9,0xB3,
+        0xE2,0x22,0xA6,0x79,0x9D,0x3E,0xB1,0x1C,
+        0xF5,0xC,0x8A,0x5,0x26,0x47,0xE8,0xDF
+    };
+
+    const unsigned char no_qr_const_2[] = {
+        0xA1,0xB9,0xFF,0xD9,0x7E,0xC9,0x11,0xD,
+        0x53,0xA2,0xCC,0x88,0x63,0x9A,0x31,0x9C,
+        0x84,0x36,0xE5,0x0,0xB4,0x1C,0x18,0x2A,
+        0xC4,0x9F,0x2,0x68,0x64,0x49,0x3F,0xC7,
+    };
+
     secp256k1_context_set_error_callback(none, counting_illegal_callback_fn, &ecount);
     secp256k1_context_set_error_callback(sign, counting_illegal_callback_fn, &ecount);
     secp256k1_context_set_error_callback(vrfy, counting_illegal_callback_fn, &ecount);
@@ -272,7 +286,12 @@ void test_aggsig_api(void) {
 
         /* Test subtracting partial sig from the completed sig (as used in early payment proofs)*/
         sub_return_val = secp256k1_aggsig_subtract_partial_signature(none, sub_result, sub_result_alt, combined_sig, sigs[0]);
+        
+        /* Check non-0 return */
         CHECK(sub_return_val);
+
+        /* And this will never be -1 */
+        CHECK(sub_return_val != -1);
 
         /* If there's only one possible result, it should be the only one that needs to be tested */
         if (sub_return_val == 1) {
@@ -299,7 +318,13 @@ void test_aggsig_api(void) {
             }
             CHECK(sub_check);
         }
-     }
+    }
+    /* check subtraction function returns -1 for values known to result in no possiblity being a quadratic residue */
+    memcpy(combined_sig, no_qr_const_1, 32);
+    memcpy(sigs[0], no_qr_const_2, 32);
+    sub_return_val = secp256k1_aggsig_subtract_partial_signature(none, sub_result, sub_result_alt, combined_sig, sigs[0]);
+    CHECK(sub_return_val == -1);
+
     /*** End aggsig for Grin exchange test ***/
 
     /* cleanup */
