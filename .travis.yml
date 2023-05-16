@@ -61,6 +61,10 @@ matrix:
           packages:
             - gcc-multilib
             - libgmp-dev:i386
+    # S390x build (big endian system)
+    - compiler: gcc
+      env: HOST=s390x-unknown-linux-gnu
+      arch: s390x
 before_install: mkdir -p `dirname $GUAVA_JAR`
 install: if [ ! -f $GUAVA_JAR ]; then wget $GUAVA_URL -O $GUAVA_JAR; fi
 before_script: ./autogen.sh
