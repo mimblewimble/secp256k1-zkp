@@ -169,11 +169,6 @@ AC_ARG_ENABLE(module_whitelist,
     [enable_module_whitelist=$enableval],
     [enable_module_whitelist=no])
 
-AC_ARG_ENABLE(jni,
-    AS_HELP_STRING([--enable-jni],[enable libsecp256k1_jni (default is no)]),
-    [use_jni=$enableval],
-    [use_jni=no])
-
 AC_ARG_ENABLE(module_surjectionproof,
     AS_HELP_STRING([--enable-module-surjectionproof],[enable surjection proof module (default is no)]),
     [enable_module_surjectionproof=$enableval],
@@ -456,29 +451,6 @@ else
   fi
 fi
 
-if test x"$use_jni" != x"no"; then
-  AX_JNI_INCLUDE_DIR
-  have_jni_dependencies=yes
-  if test x"$enable_module_ecdh" = x"no"; then
-    have_jni_dependencies=no
-  fi
-  if test "x$JNI_INCLUDE_DIRS" = "x"; then
-    have_jni_dependencies=no
-  fi
-  if test "x$have_jni_dependencies" = "xno"; then
-    if test x"$use_jni" = x"yes"; then
-      AC_MSG_ERROR([jni support explicitly requested but headers/dependencies were not found. Enable ECDH and try again.])
-    fi
-    AC_MSG_WARN([jni headers/dependencies not found. jni support disabled])
-    use_jni=no
-  else
-    use_jni=yes
-    for JNI_INCLUDE_DIR in $JNI_INCLUDE_DIRS; do
-      JNI_INCLUDES="$JNI_INCLUDES -I$JNI_INCLUDE_DIR"
-    done
-  fi
-fi
-
 if test x"$set_bignum" = x"gmp"; then
   SECP_LIBS="$SECP_LIBS $GMP_LIBS"
   SECP_INCLUDES="$SECP_INCLUDES $GMP_CPPFLAGS"
@@ -548,7 +520,6 @@ AC_MSG_NOTICE([Building benchmarks: $use_benchmark])
 AC_MSG_NOTICE([Building for coverage analysis: $enable_coverage])
 AC_MSG_NOTICE([Building ECDH module: $enable_module_ecdh])
 AC_MSG_NOTICE([Building ECDSA pubkey recovery module: $enable_module_recovery])
-AC_MSG_NOTICE([Using jni: $use_jni])
 
 if test x"$enable_experimental" = x"yes"; then
   AC_MSG_NOTICE([******])
@@ -626,7 +597,6 @@ fi
 
 AC_CONFIG_HEADERS([src/libsecp256k1-config.h])
 AC_CONFIG_FILES([Makefile libsecp256k1.pc])
-AC_SUBST(JNI_INCLUDES)
 AC_SUBST(SECP_INCLUDES)
 AC_SUBST(SECP_LIBS)
 AC_SUBST(SECP_TEST_LIBS)
@@ -645,7 +615,6 @@ AM_CONDITIONAL([ENABLE_MODULE_RANGEPROOF], [test x"$enable_module_rangeproof" = 
 AM_CONDITIONAL([ENABLE_MODULE_BULLETPROOF], [test x"$enable_module_bulletproof" = x"yes"])
 AM_CONDITIONAL([ENABLE_MODULE_AGGSIG], [test x"$enable_module_aggsig" = x"yes"])
 AM_CONDITIONAL([ENABLE_MODULE_WHITELIST], [test x"$enable_module_whitelist" = x"yes"])
-AM_CONDITIONAL([USE_JNI], [test x"$use_jni" == x"yes"])
 AM_CONDITIONAL([USE_EXTERNAL_ASM], [test x"$use_external_asm" = x"yes"])
 AM_CONDITIONAL([USE_ASM_ARM], [test x"$set_asm" = x"arm"])
 AM_CONDITIONAL([ENABLE_MODULE_SURJECTIONPROOF], [test x"$enable_module_surjectionproof" = x"yes"])
