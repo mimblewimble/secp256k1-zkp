@@ -143,6 +143,28 @@ SECP256K1_API int secp256k1_aggsig_partial_sign(
     size_t index
 ) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(4) SECP256K1_ARG_NONNULL(5) SECP256K1_WARN_UNUSED_RESULT;
 
+/** Subtract a partial signature from a completed signature, resulting in another partial signature
+ *
+ *  Returns: 0 on failure due to an argument or unexpected calculation error
+             -1 if the provided signatures result in no possible nonce with 
+                a y value that is a quadratic residue
+             1 if there is only one possible result
+             2 if there is a second possiblity for the chosen y value of the original public nonce
+ *  Args:    ctx: an existing context object, initialized for verifying (cannot be NULL)
+ *  Out:     result: the (partial) signature resulting from subtracting partial from sig64
+ *           result_alt: alternative possible signature resulting from subtracting partial from sig64
+ *  In:      sig64: a completed signature
+ *           partial64: the signature (partial) to subtract from sig64
+ */
+
+SECP256K1_API int secp256k1_aggsig_subtract_partial_signature(
+    const secp256k1_context* ctx,
+    unsigned char *result,
+    unsigned char *result_alt,
+    const unsigned char *sig64,
+    const unsigned char *partial64
+) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(4) SECP256K1_ARG_NONNULL(5) SECP256K1_WARN_UNUSED_RESULT;
+
 
 /** Aggregate multiple signature parts into a single aggregated signature
  *
